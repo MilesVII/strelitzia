@@ -1,4 +1,5 @@
-const SERVER = "http://127.0.0.1:7071/";
+const {remote, ipcRenderer} = require('electron');
+
 const COMMANDS = {
 	start: {
 		command: "START",
@@ -172,7 +173,15 @@ function start(){
 		"Because launching Spaceship is called rocket science",
 		"[eq",
 		"Ракеты нет, скачем на батуте"
+	];
+	let names = [
+		"Strelitzia",
+		"Highway",
+		"סטרליציה",
+		"Wishmaster",
+		"Создаватор"
 	]
+	document.getElementById("headerText").textContent = names[Math.floor(Math.random() * names.length)] + " " + remote.app.getVersion();
 	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
 	sendStart();
 }
@@ -222,28 +231,42 @@ function startAppSelect(apps){
 	appSelector.style.display = "inline-block";
 }
 
-function isValid(order){
-	if (!["rs", "nc", "c"].includes(order.type))
+function isValid(order, appBundle){
+	if (!["rs", "nc", "c"].includes(order.type)){
+		showModal("Unknown IAP type for " + order.bundle);
 		return false;
+	}
 	
-	if (order.refname.length < 2)
+	if (order.refname.length < 2){
+		showModal("Reference name is too short for " + order.bundle);
 		return false;
+	}
 	
-	if (order.bundle.length < 2)
+	if (order.bundle.length < 2){
+		showModal("Bundle name " + order.bundle + " is too short");
 		return false;
+	}
 
-	if (order.version.name.length < 2)
+	if (order.version.name.length < 2){
+		showModal("Localized name is too short for " + order.bundle);
 		return false;
+	}
 
-	if (order.version.desc.length < 2)
+	if (order.version.desc.length < 2){
+		showModal("Localized description is too short for " + order.bundle);
 		return false;
+	}
 
 	if (order.type == "rs"){
-		if (!["1w", "1m", "2m", "3m", "6m", "1y"].includes(order.duration))
+		if (!["1w", "1m", "2m", "3m", "6m", "1y"].includes(order.duration)){
+			showModal("Unknown duration type for " + order.bundle);
 			return false;
+		}
 
-		if (!["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(order.trial))
+		if (!["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(order.trial)){
+			showModal("Unknown trial type for " + order.bundle);
 			return false;
+		}
 	}
 
 	return true;
@@ -258,8 +281,13 @@ function collectOrders(sheet, appBundle){
 		if (!productId.startsWith(appBundle)){
 			if (productId.startsWith("."))
 				productId = appBundle + productId;
-			else
+			else {
+				if (productId.startsWith("com.")){
+					showModal(productId + " does not start with app bundle name");
+					return [];
+				}
 				productId = appBundle + "." + productId;
+			}
 		}
 
 		let entry = {
@@ -279,10 +307,9 @@ function collectOrders(sheet, appBundle){
 		} else {
 			entry.price    = row[4];
 		}
-		if (isValid(entry))
+		if (isValid(entry, appBundle))
 			harvested.push(entry);
 		else {
-			showModal("INVALID ENTRIES DETECTED");
 			return [];
 		}
 	}
@@ -455,6 +482,9 @@ function sendStart(){
 		case(RESPONSE_CODES.SELECT_TEAM):
 			startTeamSelect(r.teams);
 			break;
+		case(RESPONSE_CODES.AUTH):
+			status("Auth failed");
+			break;
 		default:
 			status(r);
 		}
@@ -551,7 +581,8 @@ function listApps(){
 }
 
 function selectApp(app){
-	status("");
+	status("Loading");
+	hideAllDialogs();
 	selectedApp = app;
 
 	let message = COMMANDS.selectApp;
@@ -575,7 +606,7 @@ let buttonsLocked = false;
 function createIAPs(){
 	if (buttonsLocked) return;
 	buttonsLocked = true;
-	status("IAP creation process is initiated. You can observe progress using console.");
+	status("IAP creation process is initiated. Hover list items to see error messages.");
 	
 	let message = COMMANDS.create;
 	message.options.appId = selectedApp.id;
@@ -588,7 +619,7 @@ function createIAPs(){
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
-				status("Finished, check console");
+				status("Finished");
 				button.style.backgroundColor = defaultButtonColor;
 				buttonsLocked = false;
 				break;
@@ -633,23 +664,126 @@ function recreateIAPs(){
 	return false;
 }
 
+ipcRenderer.on("progressUpdate", (event, arg) => {
+	function updateCaption(source, icon){
+		return icon + source.substr(2);
+	}
+
+	//console.log(arg);
+
+	const PROGRESS_INIT    = "💬 ";
+	const PROGRESS_IN_WORK = "✨ ";
+	const PROGRESS_DONE    = "✅ ";
+	const PROGRESS_FAIL    = "❌ ";
+	const PROGRESS_WARNING = "⚠️ ";
+	const PROGRESS_UNKNOWN = "❓ ";
+	const PROGRESS_APOL    = "🏳️‍🌈 ";
+
+	const ID_PREFIX = "progressList_";
+
+	const AGRESSIVE_HOVER = true;
+
+	switch (arg.type){
+		case("init"): {
+			let dialog = document.getElementById("dialog_progress");
+			dialog.innerHTML = "";
+			dialog.style.display = "block";
+
+			/*
+			arg {
+				type: "",
+				tasks: [
+					{
+						name: "",
+						id: ""
+						steps: [
+							{
+								name: "",
+								id: ""
+							}
+						]
+					}
+				]
+			}
+			*/
+			let list = document.createElement("ul");
+			list.className = "progressList";
+
+			for (let task of arg.tasks){
+				let item = document.createElement("li");
+				item.dataset.name = item.textContent = PROGRESS_INIT + task.name;
+				item.id = ID_PREFIX + task.id;
+				item.className = "progressItem";
+				
+				if (AGRESSIVE_HOVER){
+					item.addEventListener("mouseenter", e => {
+						if (item.dataset.message)
+							item.textContent = item.dataset.message;
+					});
+					item.addEventListener("mouseleave", e => {
+						item.textContent = item.dataset.name;
+					});
+				}
+
+				let sublist = document.createElement("ul");
+				for (let step of task.steps){
+					let stepItem = document.createElement("li");
+					stepItem.dataset.name = stepItem.textContent = PROGRESS_INIT + step.name;
+					stepItem.id = ID_PREFIX + step.id;
+					stepItem.className = "progressItem";
+					
+					if (AGRESSIVE_HOVER){
+						stepItem.addEventListener("mouseenter", e => {
+							if (stepItem.dataset.message)
+								stepItem.textContent = stepItem.dataset.message;
+						});
+						stepItem.addEventListener("mouseleave", e => {
+							stepItem.textContent = stepItem.dataset.name;
+						});
+					}
+
+					sublist.appendChild(stepItem);
+				}
+				list.appendChild(item)
+				if (task.steps.length > 0)
+					list.appendChild(sublist);
+			}
+			dialog.appendChild(list);
+
+			break;
+		}
+		case("update"): {
+			/*
+			arg {
+				id: "",
+				status = inwork | done_ok | done_warn | done_fail
+			}
+			*/
+			let item = document.getElementById(ID_PREFIX + arg.id);
+			switch (arg.status){
+				case ("inwork"):       item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_IN_WORK); break;
+				case ("done_ok"):      item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_DONE);    break;
+				case ("done_warning"): item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_WARNING); break;
+				case ("done_fail"):    item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_FAIL);    break;
+				case ("done_badapol"): item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_APOL);    break;
+				default:               item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_UNKNOWN); break;
+			}
+			if (arg.message) 
+				if (AGRESSIVE_HOVER)
+					item.dataset.message = arg.message;
+				else
+					item.title = arg.message;
+
+			break;
+		}
+	}
+});
+
 function sendCommand(command, callback){
-	fetch(SERVER, {
-		method: 'POST', 
-		cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-		credentials: 'same-origin', 
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(command)
-	}).then(res => res.text().then(res => {
-
-		let response = JSON.parse(res);
-
+	ipcRenderer.once("strelitziaResponse", (event, response) => {
 		if (!processCommonResponses(response)){
 			callback(response);
 		}
-	}));
-	
-	return false;
+	});
+	ipcRenderer.send("strelitziaCommand", command);
 }

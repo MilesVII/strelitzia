@@ -5,12 +5,15 @@
 		<meta charset="UTF-8">
 		<link rel="icon" type="image/png" href="./icon.png">
 
+		<link rel="preconnect" href="https://fonts.gstatic.com">
+		<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@200&display=swap" rel="stylesheet"> 
+
 		<script type="text/javascript" src="./papaparse.min.js"></script>
 		<script src="./handsontable/handsontable.full.min.js"></script>
 		<link rel="stylesheet" href="./handsontable/handsontable.full.min.css" type="text/css" />
 		
 		<link rel="stylesheet" type="text/css" href="styles.css">
-		<script type="text/javascript" src="./strelitzia.js"></script>
+		<script type="text/javascript" src="./renderer.js"></script>
 		</script>
 	</head>
 	<body onload="start()">
@@ -21,7 +24,7 @@
 						<img src="./icon.png" id="headerLogo"/>
 					</th>
 					<th style="width: 64%; text-align: start;">
-						<div id="headerText">Strelitzia 0.9.2</div>
+						<div id="headerText">Strelitzia</div>
 						<div id="headerSub"></div>
 					</th>
 					<th style="width: 12%;">
@@ -31,6 +34,7 @@
 								<a onclick="servicePrices()">View Prices</a>
 								<a onclick="serviceSignout()">Sign out</a>
 								<a onclick="serviceReset()">Reset</a>
+								<a onclick="remote.getCurrentWindow().openDevTools()">Debug</a>
 							</div>
 						</div>
 					</th>
@@ -49,6 +53,7 @@
 			
 			
 			<div id="status"></div>
+			<div class="dialog" id="dialog_progress"></div>
 			<div class="dialog" id="dialog_login">
 				<form onsubmit="return sendLogin();">
 					<input type="text" id="dialog_login_login" class="longinput" name="Login" placeholder="Login" required>
@@ -70,7 +75,7 @@
 			<div class="dialog" id="dialog_main">
 				<div class="xbutton" onclick="listApps()">Back to app list</div>
 				<div class="xbutton" id="dialog_main_button_create" onclick="createIAPs();">Start IAP creation</div>
-				<div class="xbutton" id="dialog_main_button_recreate" onclick="recreateIAPs();">Start recreating</div>
+				<!--<div class="xbutton" id="dialog_main_button_recreate" onclick="recreateIAPs();">Start recreating</div>-->
 				<input type="file" id="filePicker" onchange="addFromFile(this.files[0]);"></input>
 				<label class="xbutton" for="filePicker">Load from file</label>
 			</div>

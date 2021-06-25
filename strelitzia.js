@@ -2,16 +2,38 @@ const http = require('http');   //For server
 const https = require('https'); //For apol
 const fs = require('fs');       //For fuck's sake (storage)
 const zlib = require("zlib");   //For reading apol POST responses (really)
-
-const hostname = "127.0.0.1";
-const port = 7071;
+const {app, BrowserWindow, ipcMain} = require('electron');
 
 const DEBUG_MODE = false;
+const BAD_APOL = "🏳️‍🌈🏳️‍🌈🏳️‍🌈  B4D AP0L 🏳️‍🌈🏳️‍🌈🏳️‍🌈";
+let mainWindow;
 
+function createWindow () {
+	// Create the browser window.
+	mainWindow = new BrowserWindow({
+		width: 1280,
+		height: 800,
+		webPreferences: {
+			nodeIntegration: true,
+			contextIsolation: false,
+			enableRemoteModule: true
+		}
+	});
+
+	mainWindow.loadFile('./src/client/index.html');
+	if (DEBUG_MODE) mainWindow.webContents.openDevTools();
+}
+
+app.whenReady().then(() => {
+	createWindow();
+	start();
+})
+
+const CWD = app.getPath("userData");
 let storage = {};
 function loadStorage(){
 	try {
-		let f = fs.readFileSync('storage.json');
+		let f = fs.readFileSync(CWD + "/storage.json");
 		if (f) storage = JSON.parse(f);
 	} catch (e){
 		console.log("No saved storages found, will load new");
@@ -19,54 +41,24 @@ function loadStorage(){
 }
 function saveStorage(){
 	let s = JSON.stringify(storage)
-	fs.writeFileSync("storage.json", s);
+	fs.writeFileSync(CWD + "/storage.json", s);
 }
 loadStorage();
 
-const server = http.createServer((req, res) => {
-	// Set CORS headers
-	res.setHeader("Access-Control-Allow-Origin", "*");
-	res.setHeader("Access-Control-Request-Method", "*");
-	res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST");
-	res.setHeader("Access-Control-Allow-Headers", "*");
-	if (req.method === "OPTIONS") {
-		res.writeHead(200);
-		res.end();
-		return;
-	}
-
-	res.statusCode = 200;
-	res.setHeader('Content-Type', 'text/plain');
-
-	let data = [];
-	req.on('data', chunk => {
-		data.push(chunk);
-	});
-	req.on('end', async () => {
-		let m = Buffer.concat(data).toString();
-		let r = await respondToCommand(JSON.parse(m));
-		res.end(JSON.stringify(r));
-	});
-});
-
-server.listen(port, hostname, () => {
-	console.log(`Server running at http://${hostname}:${port}/`);
-
+function start(){
 	if (!storage["serviceKey"])
 		sendServiceKeyRequest().then((key) => setServiceKey(key));
-	
+
 	let path = process.execPath;
 	path = path.substring(0, path.lastIndexOf("/") + 1);
-	if (DEBUG_MODE){
-		console.log("RUNNING IN DEBUG MODE");
-	} else {
-		process.chdir(path);
-		console.log("Jumped to " + path);
-		let url = './client/strelitzia.html';
-		let start = (process.platform == 'darwin'? 'open': process.platform == 'win32'? 'start': 'xdg-open');
-		require('child_process').exec(start + ' ' + url);
-	}
-});
+
+	console.log("Current path " + process.cwd());
+}
+
+ipcMain.on('strelitziaCommand', async (event, command) => {
+	let r = await respondToCommand(command);
+	event.sender.send("strelitziaResponse", r);
+})
 
 const RESPONSE_CODES = {
 	ERROR: 0,
@@ -110,6 +102,7 @@ const ENDPOINTS = {
 	famTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/template",                   //appId
 	priceMatrixRecurring:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix/recurring",          //appId
 	priceMatrixConsumable: "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix?iapType=consumable", //appId
+	equalize:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/equalize/USD/#",          //appId, productId, tier
 	create:                "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
 	createFamily:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/",                           //appId
 	rsPriceCreate:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/subscriptions",           //appId, productId
@@ -121,6 +114,12 @@ const ENDPOINTS = {
 const METHOD_GET = "GET";
 const METHOD_POST = "POST";
 const METHOD_PUT = "PUT";
+
+function sendProgressData(data){
+	if (!data.type) data.type = "update";
+	if (data.message == BAD_APOL) data.status = "done_badapol";
+	mainWindow.webContents.send("progressUpdate", data);
+}
 
 async function respondToCommand(command){
 	let response = {
@@ -339,11 +338,18 @@ async function respondToCommand(command){
 			return 0;
 		}
 
-		function buildSubscriptionPricing(tier){
+		function buildSubscriptionPricing(equalizedTierMap){
 			let data = {
 				subscriptions: []
 			}
+
 			for (let code of storage.countryCodes){
+				if (!equalizedTierMap[code]){
+					console.log("UNKNOWN CODE IN KNOWN LIST");
+					return null;
+				}
+				let tier = equalizedTierMap[code].tierStem;
+
 				let entry = {
 					errorKeys: null,
 					isEditable: true,
@@ -403,18 +409,27 @@ async function respondToCommand(command){
 			return data;
 		}
 
-		async function obtainFreshPurchase(appId, productId, tries){
+		async function obtainFreshPurchase(appId, productBundleName, tries){
 			while (tries > 0){
 				let iapsResponse = await sendIAPsRequest(appId);
 
 				let iapsParsed = JSON.parse(iapsResponse).data;
 				for (let i of iapsParsed)
-					if (i.vendorId == productId)
+					if (i.vendorId == productBundleName)
 						return i;
 
-				//console.log("apple is shid")
+				sendProgressData({
+					id: productBundleName + ".obtainid",
+					status: "done_badapol",
+					message: "Retrying to obtain id of fresh product. Tries left: " + tries
+				});
 				tries -= 1;
 			}
+			sendProgressData({
+				id: productBundleName + ".obtainid",
+				status: "done_fail",
+				message: "Failed to acquire id of freshly created "
+			});
 			return null;
 		}
 
@@ -423,153 +438,376 @@ async function respondToCommand(command){
 				console.log("Errors (" + target + "): ");
 				console.log(e.join("\n"));
 				console.log("\n");
+				return e.join("\n");
+			}
+			return null;
+		}
+		
+		let anyRSOrdersExist = false;
+		for (let order of command.options.orders){
+			if (order.type == "rs") {
+				anyRSOrdersExist = true; 
+				break;
 			}
 		}
+
+		function buildProgressList(){
+			let list = [];
+
+			if (anyRSOrdersExist){
+				list.push({
+					name: "Determine family",
+					id: "getfamily",
+					steps: []
+				});
+			}
+
+			for (let order of command.options.orders){
+				let t = {
+					name: "IAP " + order.bundle,
+					id: order.bundle,
+					steps: [
+						{
+							name: "Load IAP template",
+							id: order.bundle + ".template",
+						},
+						{
+							name: "Create IAP",
+							id: order.bundle + ".create",
+						}
+					]
+				};
+
+				if (order.type == "rs"){
+					t.steps.push({
+						name: "Get fresh product id",
+						id: order.bundle + ".obtainid",
+					});
+					t.steps.push({
+						name: "Add price",
+						id: order.bundle + ".price",
+					});
+					if (order.trial != "off"){
+						t.steps.push({
+							name: "Add trial",
+							id: order.bundle + ".trial",
+						});
+					}
+				}
+				list.push(t);
+			}
+
+			return list;
+		}
+
+		sendProgressData({
+			type: "init",
+			tasks: buildProgressList()
+		});
+
 		let currentFamily = {
 			name: null,
 			id: null
 		}
 
-		console.log("\nReceived order. Acquiring list of created families")
-		let familiesResponse = await sendFamiliesRequest(command.options.appId);
-		if (familiesResponse == "AUTH"){
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		} else {
-			let parsed = JSON.parse(familiesResponse).data;
-			if (parsed.length >= 1){
-				currentFamily.name = parsed[0].name.value;
-				currentFamily.id = parsed[0].id;
-				console.log("Detected created family. Using \"" + currentFamily.name + "\"")
+		console.log("\nReceived orders")
+		let familiesResponse = null;
+		if (anyRSOrdersExist){
+			sendProgressData({
+				id: "getfamily",
+				status: "inwork"
+			});
+			let familiesResponse = await sendFamiliesRequest(command.options.appId);
+			if (familiesResponse == "AUTH"){
+				response.code = RESPONSE_CODES.AUTH;
+				sendProgressData({
+					id: "getfamily",
+					status: "done_fail",
+					message: "Authorization required"
+				});
+				return response;
 			} else {
-				console.log("No families detected, will create a new one with name \"" + order.options.defaultFamilyName + "\"");
+				let parsed = JSON.parse(familiesResponse).data;
+				if (parsed.length >= 1){
+					currentFamily.name = parsed[0].name.value;
+					currentFamily.id = parsed[0].id;
+					sendProgressData({
+						id: "getfamily",
+						status: "done_ok",
+						message: "Detected existing family. Using \"" + currentFamily.name + "\""
+					});
+				} else {
+					sendProgressData({
+						id: "getfamily",
+						status: "done_warning",
+						message: "No families detected, will create a new one with name \"" + command.options.defaultFamilyName + "\""
+					});
+				}
 			}
 		}
 
 		console.log("Run initiated, orders in queue: " + command.options.orders.length);
 		let finishedCount = 0;
 		for (let order of command.options.orders){
-			let baseResponse;
-			
-			let versions = {value: {
-				description: {value: order.version.desc},
-				name:        {value: order.version.name},
-				localeCode:  "en-US"
-			}};
+			try {
+				sendProgressData({
+					id: order.bundle,
+					status: "inwork"
+				});
 
-			if (order.type == "rs" && !currentFamily.name){
-				//Create subscription together with family
-				let templateResponse = await sendFamilyTemplateRequest(command.options.appId);
-				if (templateResponse == "AUTH"){
-					response.code = RESPONSE_CODES.AUTH;
-					return response;
-				}
+				let baseResponse;
+				let foundFreshPurchase = null;
+				
+				let versions = {value: {
+					description: {value: order.version.desc},
+					name:        {value: order.version.name},
+					localeCode:  "en-US"
+				}};
 
-				let template = JSON.parse(templateResponse).data;
-				template.activeAddOns[0].productId = {value: order.bundle};
-				template.activeAddOns[0].referenceName = {value: order.refname};
-				//template.activeAddOns[0].pricingDurationType = {value: order.duration}; //doesn't work
-				template.name = {value: order.options.defaultFamilyName};
-				template.details.value = [];
-				let famCreateResponse = await sendFamilyCreation(template, command.options.appId);
+				if (order.type == "rs" && !currentFamily.name){
+					//Create subscription together with family
+					sendProgressData({
+						id: order.bundle + ".template",
+						status: "inwork"
+					});
+					let templateResponse = await sendFamilyTemplateRequest(command.options.appId);
+					if (templateResponse == "AUTH"){
+						response.code = RESPONSE_CODES.AUTH;
 
-				if (famCreateResponse == "OK"){
-					let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
-
-					//Register freshly created family
-					familiesResponse = await sendFamiliesRequest(command.options.appId);
-					reportErrorsIfAny(requestErrors, order.bundle);
-					let parsed = JSON.parse(familiesResponse).data;
-					if (parsed.length >= 1){
-						currentFamily.name = parsed[0].name.value;
-						currentFamily.id = parsed[0].id;
+						sendProgressData({
+							id: order.bundle + ".template",
+							status: "done_fail"
+						});
+						return response;
 					}
+					sendProgressData({
+						id: order.bundle + ".template",
+						status: "done_ok"
+					});
 
-					if (!found){
+					let template = JSON.parse(templateResponse).data;
+					template.activeAddOns[0].productId = {value: order.bundle};
+					template.activeAddOns[0].referenceName = {value: order.refname};
+					//template.activeAddOns[0].pricingDurationType = {value: order.duration}; //doesn't work
+					template.name = {value: command.options.defaultFamilyName};
+					template.details.value = [];
+					sendProgressData({
+						id: order.bundle + ".create",
+						status: "inwork"
+					});
+					let famCreateResponse = await sendFamilyCreation(template, command.options.appId);
+
+					if (famCreateResponse == "OK"){
+						sendProgressData({
+							id: order.bundle + ".create",
+							status: "done_ok"
+						});
+
+						//Register freshly created family
+						familiesResponse = await sendFamiliesRequest(command.options.appId);
+						let parsed = JSON.parse(familiesResponse).data;
+						if (parsed.length >= 1){
+							currentFamily.name = parsed[0].name.value;
+							currentFamily.id = parsed[0].id;
+						}
+
+						sendProgressData({
+							id: order.bundle + ".obtainid",
+							status: "inwork"
+						});
+						foundFreshPurchase = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
+
+						if (!foundFreshPurchase){
+							response.code = RESPONSE_CODES.ERROR;
+							response.message = "Failed to find freshly created IAP";
+							return response;
+						}
+						sendProgressData({
+							id: order.bundle + ".obtainid",
+							status: "done_ok"
+						});
+						sendProgressData({
+							id: order.bundle + ".price",
+							status: "inwork"
+						});
+
+						let detailsResponse = await sendIAPDetailsRequest(command.options.appId, foundFreshPurchase.adamId);
+						reportErrorsIfAny(requestErrors, order.bundle);
+						let freshProduct = JSON.parse(detailsResponse).data;
+						freshProduct.versions[0].details.value = [versions];
+						freshProduct.pricingDurationType = {value: order.duration};
+						
+						baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, foundFreshPurchase.adamId);
+						if (baseResponse != "OK") {
+							console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
+							sendProgressData({
+								id: order.bundle + ".price",
+								status: "done_fail",
+								message: reportErrorsIfAny(requestErrors, order.bundle)
+							});
+						} else {
+							sendProgressData({
+								id: order.bundle + ".price",
+								status: "done_ok"
+							});
+						}
+					} else {
+						sendProgressData({
+							id: order.bundle + ".create",
+							status: "done_failed",
+							message: "Failed to create family, aborting"
+						});
+						break;
+					}
+				} else {
+					//Create IAP normally
+					sendProgressData({
+						id: order.bundle + ".template",
+						status: "inwork"
+					});
+					let templateResponse = await sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
+					if (templateResponse == "AUTH"){
+						response.code = RESPONSE_CODES.AUTH;
+						sendProgressData({
+							id: order.bundle + ".template",
+							status: "done_fail"
+						});
+						return response;
+					}
+					sendProgressData({
+						id: order.bundle + ".template",
+						status: "done_ok"
+					});
+
+					let template = JSON.parse(templateResponse).data;
+					template.familyId = currentFamily.id;
+					template.productId = {value: order.bundle};
+					template.referenceName = {value: order.refname};
+					template.clearedForSale = {value: true};
+
+					template.pricingIntervals = [{value:{
+						country: "WW",
+						tierStem: determineTier(order.type, order.price),
+						priceTierEndDate: null,
+						priceTierEffectiveDate: null
+					}}]
+
+					template.versions[0].details.value = [versions];
+					
+					if (order.type == "rs"){
+						template.pricingDurationType = {value: order.duration};
+					}
+					sendProgressData({
+						id: order.bundle + ".create",
+						status: "inwork"
+					});
+					baseResponse = await sendIAPCreation(template, command.options.appId);
+				}
+				if (baseResponse != "OK"){
+					sendProgressData({
+						id: order.bundle + ".create",
+						status: "done_fail",
+						message: reportErrorsIfAny(requestErrors, order.bundle)
+					});
+					finishedCount += 1;
+
+					console.log("Fail " + finishedCount + "/" + command.options.orders.length + ": " + order.bundle);
+					sendProgressData({
+						id: order.bundle,
+						status: "done_fail",
+						message: reportErrorsIfAny(requestErrors, order.bundle)
+					});
+
+					continue;
+				}
+				sendProgressData({
+					id: order.bundle + ".create",
+					status: "done_ok"
+				});
+				if (order.type == "rs"){
+					//Proceed to create pricing and trial
+					sendProgressData({
+						id: order.bundle + ".obtainid",
+						status: "inwork"
+					});
+
+					if (!foundFreshPurchase)
+						foundFreshPurchase = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
+
+					if (!foundFreshPurchase){
 						response.code = RESPONSE_CODES.ERROR;
 						response.message = "Failed to find freshly created IAP";
 						return response;
 					}
-
-					let detailsResponse = await sendIAPDetailsRequest(command.options.appId, found.adamId);
-					reportErrorsIfAny(requestErrors, order.bundle);
-					let freshProduct = JSON.parse(detailsResponse).data;
-					freshProduct.versions[0].details.value = [versions];
-					freshProduct.pricingDurationType = {value: order.duration};
+					sendProgressData({
+						id: order.bundle + ".obtainid",
+						status: "done_ok"
+					});
 					
-					baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
-					if (baseResponse != "OK") {
-						console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
-						reportErrorsIfAny(requestErrors, order.bundle);
+					let productId = foundFreshPurchase.adamId;
+					let equalizedRaw = await sendEqualizeByUSDRequest(command.options.appId, productId, determineTier(order.type, order.price));
+					let equalized = JSON.parse(equalizedRaw).data;
+					let pricing = buildSubscriptionPricing(equalized);
+					sendProgressData({
+						id: order.bundle + ".price",
+						status: "inwork"
+					});
+					let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
+					if (pricingResponse == "OK"){
+						sendProgressData({
+							id: order.bundle + ".price",
+							status: "done_ok"
+						});
+						
+						if (order.trial != "off"){
+							sendProgressData({
+								id: order.bundle + ".trial",
+								status: "inwork"
+							});
+							let trial = buildTrialRequest(order.trial, command.options.appId, productId);
+							let trialResponse = await sendTrialCreation(trial);
+							if (trialResponse != "OK") {
+								console.log("Failed to create trial for " + order.bundle);
+								sendProgressData({
+									id: order.bundle + ".trial",
+									status: "done_fail",
+									message: reportErrorsIfAny(requestErrors, order.bundle)
+								});
+							} else {
+								sendProgressData({
+									id: order.bundle + ".trial",
+									status: "done_ok"
+								});
+							}
+						}
+					} else {
+						sendProgressData({
+							type: "update",
+							id: order.bundle + ".price",
+							status: "done_fail",
+							message: reportErrorsIfAny(requestErrors, order.bundle)
+						});
+
 					}
-				} else {
-					console.log("Failed to create family, aborting");
-					break;
-				}
-			} else {
-				//Create IAP normally
-				let templateResponse = await sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
-				if (templateResponse == "AUTH"){
-					response.code = RESPONSE_CODES.AUTH;
-					return response;
-				}
 
-				let template = JSON.parse(templateResponse).data;
-				template.familyId = currentFamily.id;
-				template.productId = {value: order.bundle};
-				template.referenceName = {value: order.refname};
-				template.clearedForSale = {value: true};
-
-				template.pricingIntervals = [{value:{
-					country: "WW",
-					tierStem: determineTier(order.type, order.price),
-					priceTierEndDate: null,
-					priceTierEffectiveDate: null
-				}}]
-
-				template.versions[0].details.value = [versions];
-				
-				if (order.type == "rs"){
-					template.pricingDurationType = {value: order.duration};
+					
 				}
-				baseResponse = await sendIAPCreation(template, command.options.appId);
+				finishedCount += 1;
+				console.log("Done " + finishedCount + "/" + command.options.orders.length);
+
+				sendProgressData({
+					type: "update",
+					id: order.bundle,
+					status: "done_ok"
+				});
+			} catch (e) {
+				sendProgressData({
+					type: "update",
+					id: order.bundle,
+					status: "done_fail",
+					message: "Error occurred: " + e.name + ": " + e.message
+				});
 			}
-			if (baseResponse != "OK"){
-				if (baseResponse == "AUTH"){
-					response.code = RESPONSE_CODES.AUTH;
-					return(response);
-				} else {
-					finishedCount += 1;
-					console.log("Fail " + finishedCount + "/" + command.options.orders.length);
-					reportErrorsIfAny(requestErrors, order.bundle);
-
-					continue;
-				}
-			}
-			if (order.type == "rs"){
-				//Proceed to create pricing and trial
-				let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
-
-				if (!found){
-					response.code = RESPONSE_CODES.ERROR;
-					response.message = "Failed to find freshly created IAP";
-					return response;
-				}
-				
-				let productId = found.adamId;
-				let pricing = buildSubscriptionPricing(determineTier(order.type, order.price));
-				let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
-				reportErrorsIfAny(requestErrors, order.bundle);
-
-				if (order.trial != "off" && pricingResponse == "OK"){
-					let trial = buildTrialRequest(order.trial, command.options.appId, productId);
-					let trialResponse = await sendTrialCreation(trial);
-					reportErrorsIfAny(requestErrors, order.bundle);
-					if (trialResponse != "OK") console.log("Failed to create trial");
-				}
-			}
-			finishedCount += 1;
-			console.log("Done " + finishedCount + "/" + command.options.orders.length);
 		}
 		console.log("Finished");
 		response.code = RESPONSE_CODES.OK;
@@ -724,6 +962,10 @@ function sendCMatrixRequest(appId){
 	return genericRequest(METHOD_GET, null, ENDPOINTS.priceMatrixConsumable, [appId]);
 }
 
+function sendEqualizeByUSDRequest(appId, productId, tier){
+	return genericRequest(METHOD_GET, null, ENDPOINTS.equalize, [appId, productId, tier]);
+}
+
 function sendCountriesRequest(){
 	//return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodes, null);
 	return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodesBetter, null);
@@ -840,15 +1082,11 @@ function genericRequest(method, data, endpoint, endpointParameters, tries = 7){
 				case (502):
 				case (503):
 				case (504):
-					if (tries <= 0){
-						let message = `Request failed after retries: ${res.statusCode} at ${endpoint}`;
-						console.log(message);
-						console.log(responseBody);
-						resolve(message);
-					} else {
-						let r = await genericRequest(method, data, endpoint, endpointParameters, tries - 1);
-						resolve(r);
-					}
+					let message = `Request failed after retries: ${res.statusCode} at ${endpoint}`;
+					console.log(message);
+					console.log(responseBody);
+					requestErrors = [BAD_APOL]
+					resolve(message);
 				default:
 					console.log(`Unknown status: ${res.statusCode} at ${endpoint}`);
 					resolve(responseBody);

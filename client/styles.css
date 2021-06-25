@@ -10,7 +10,7 @@ body {
 	padding: 0;
 	font-family: sans-serif;
 	font-weight: 200;
-	font-size: 20pt;
+	font-size: 17pt;
 	text-align: center;
 }
 
@@ -100,7 +100,7 @@ input[type="text"], input[type="password"] {
 	margin-top: 1px;
 	border: 0;
 	display: inline-block;
-	font-size: 20pt;
+	font-size: 17pt;
 }
 
 input[type="file"] {
@@ -119,6 +119,12 @@ input[type="file"] {
 	margin: 10px;
 }
 
+.progressList li {
+	list-style: none;
+	text-align: initial;
+	font-family: "Roboto Mono", monospace;
+}
+
 .subgroup {
 	background-color: rgba(.9, .9, .9, .1);
 	margin: 5px;
@@ -133,7 +139,7 @@ input[type="file"] {
 	width: 50%;
 	font-family: sans-serif;
     font-weight: 200;
-	font-size: 20pt;
+	font-size: 17pt;
 	background-color: #eee;
 	text-decoration: none;
 	cursor: pointer;
@@ -209,4 +215,12 @@ input[type="file"] {
 	border: 1px solid #888;
 	width: 70%;
 	white-space: pre-line;
+}
+
+.progressItem{
+	white-space: pre-line;
+}
+
+.progressItem:hover{
+	background-color: rgba(255, 255, 255, .2);
 }
