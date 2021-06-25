@@ -45,6 +45,13 @@ const COMMANDS = {
 			orders: []
 		}
 	},
+	edit: {
+		command: "EDIT_IAP",
+		options: {
+			appId: "0",
+			orders: []
+		}
+	},
 	recreate: {
 		command: "RECREATE",
 		options: {
@@ -56,6 +63,12 @@ const COMMANDS = {
 		command: "SERVICE",
 		options: {
 			message: ""
+		}
+	},
+	downloadIAPs: {
+		command: "DL_IAPS",
+		options: {
+			appId: "0"
 		}
 	}
 };
@@ -116,10 +129,70 @@ const IAP_TYPES  = ["rs", "nc", "c"];
 const IAP_DURS   = ["1w", "1m", "2m", "3m", "6m", "1y"];
 const IAP_TRIALS = ["off", "3d"];//, "1w", "1m", "2m", "3m", "6m", "1y"];
 
-let table = null;
-function initSheet(rsMatrix, cMatrix){
-	if (table) {
-		table.destroy(); 
+function refreshCreateConfirmer(s){
+	if (s.value >= 98){
+		s.value = 100;
+		s.style.backgroundColor = "#DA4000";
+		s.disabled = true;
+		createIAPs();
+	}		
+} 
+
+function resetCreateConfirmer(s){
+	if (s.value < 98)
+		s.value = 0;
+}
+
+function refreshEditConfirmer(s){
+	if (s.value >= 98){
+		s.value = 100;
+		s.style.backgroundColor = "#DA4000";
+		s.disabled = true;
+		editIAPs();
+	}		
+} 
+
+function resetEditConfirmer(s){
+	if (s.value < 98)
+		s.value = 0;
+}
+
+function switchMode(e){
+	if (!e.target.classList.contains("xradio"))
+		return;
+	let parent = e.target.parentElement;
+	for (let sibs of parent.children){
+		sibs.className = "xradio";
+	}
+	e.target.className = "xradio xradio_selected";
+
+	let dialogCreate = document.getElementById("dialog_sheet_create");
+	let dialogEdit = document.getElementById("dialog_sheet_edit");
+	dialogCreate.style.display = "none";
+	dialogEdit.style.display = "none";
+
+	switch (e.target.id){
+		case("xr_create"): {
+			dialogCreate.style.display = "block";
+			break;
+		}
+		case("xr_edit"): {
+			dialogEdit.style.display = "block";
+			break;
+		}
+		case("xr_recreate"): {
+			break;
+		}
+	}
+}
+
+let tables = {
+	"spreadsheet_create": null,
+	"spreadsheet_edit": null
+}
+function initTable(id, rsMatrix, cMatrix){
+	if (tables[id]) {
+		tables[id].destroy(); 
 	}
 
 	let rsPrices = [];
@@ -130,8 +203,8 @@ function initSheet(rsMatrix, cMatrix){
 	for (let сPrice of cMatrix){
 		сPrices.push(сPrice.price);
 	}
-	let container = document.getElementById("spreadsheet");
-	table = new Handsontable(container, {
+
+	let settings = {
 		data: [],
 		rowHeaders: true,
 		colHeaders: ["Type", "Reference Name", "Bundle Suffix", "Price (RS)", "Price (C/NC)", "Duration", "Trial", "Name (en-US)", "Description (en-US)"],
@@ -163,9 +236,9 @@ function initSheet(rsMatrix, cMatrix){
 		],
 		minSpareRows: 1,
 		licenseKey: "non-commercial-and-evaluation"
-	});
-
-	return table;
+	};
+	let container = document.getElementById(id);
+	tables[id] = new Handsontable(container, settings);
 }
 
 function start(){
@@ -176,13 +249,20 @@ function start(){
 	];
 	let names = [
 		"Strelitzia",
-		"Highway",
 		"סטרליציה",
-		"Wishmaster",
-		"Создаватор"
+		"Wishmaster"
 	]
 	document.getElementById("headerText").textContent = names[Math.floor(Math.random() * names.length)] + " " + remote.app.getVersion();
 	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
+	document.addEventListener("keydown", (e) => {
+		if (e.key == "y" && e.repeat)
+			for (let slider of document.getElementsByClassName("slider"))
+				slider.classList.add("easterSlider");
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key == "F12")
+			remote.getCurrentWindow().openDevTools();
+	});
 	sendStart();
 }
 
@@ -364,7 +444,7 @@ function addFromFile(file){
 			}
 			processed.push(data);
 		}
-		addOrders(table, processed);
+		addOrders(tables["spreadsheet_create"], processed);
 	}
 
 	Papa.parse(file, {
@@ -375,11 +455,11 @@ function addFromFile(file){
 	});
 }
 function startMainDialog(cMatrix, rsMatrix, appBundle, appId){
-	status(appBundle);
+	document.getElementById("dialog_main_appname").textContent = appBundle;
+	status("");
 	hideAllDialogs();
-	let dialogSheet = document.getElementById("dialog_sheet");
-	dialogSheet.style.display = "block";
-	initSheet(rsMatrix, cMatrix);
+	initTable("spreadsheet_create", rsMatrix, cMatrix);
+	initTable("spreadsheet_edit", rsMatrix, cMatrix);
 	let dialog = document.getElementById("dialog_main");
 	dialog.style.display = "block";
 }
@@ -387,7 +467,6 @@ function startMainDialog(cMatrix, rsMatrix, appBundle, appId){
 function loginComplete(){
 	listApps();
 }
-
 
 
 function processCommonResponses(response){
@@ -603,25 +682,62 @@ function selectApp(app){
 
 let defaultButtonColor;
 let buttonsLocked = false;
+let editButtonsLocked = false;
 function createIAPs(){
 	if (buttonsLocked) return;
 	buttonsLocked = true;
+	let dialog = document.getElementById("dialog_progress");
+	dialog.innerHTML = "";
 	status("IAP creation process is initiated. Hover list items to see error messages.");
 	
 	let message = COMMANDS.create;
 	message.options.appId = selectedApp.id;
-	message.options.orders = collectOrders(table, selectedApp.bundle);
+	message.options.orders = collectOrders(tables["spreadsheet_create"], selectedApp.bundle);
 
-	let button = document.getElementById("dialog_main_button_create");
-	defaultButtonColor = button.style.backgroundColor;
-	button.style.backgroundColor = "#FDD";
+	let button = document.getElementById("dialog_create_confirmer");
+	//defaultButtonColor = button.style.backgroundColor;
+	//button.style.backgroundColor = "#FDD";
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
 				status("Finished");
-				button.style.backgroundColor = defaultButtonColor;
+				button.disabled = false;
+				button.style.backgroundColor = "#333";
+				button.value = 0;
 				buttonsLocked = false;
+				break;
+			case(RESPONSE_CODES.ERROR):
+				status(r.message);
+				break;
+			default:
+				status(r);
+		}
+	})
+
+	return false;
+}
+function editIAPs(){
+	if (editButtonsLocked) return;
+	editButtonsLocked = true;
+	let dialog = document.getElementById("dialog_progress");
+	dialog.innerHTML = "";
+	status("IAP editing process is initiated. Hover list items to see error messages.");
+	
+	let message = COMMANDS.edit;
+	message.options.appId = selectedApp.id;
+	message.options.orders = collectOrders(tables["spreadsheet_edit"], selectedApp.bundle);
+
+	let button = document.getElementById("dialog_edit_confirmer");
+
+	sendCommand(message, (r)=>{
+		switch(r.code){
+			case(RESPONSE_CODES.OK):
+				status("Finished");
+				button.disabled = false;
+				button.style.backgroundColor = "#333";
+				button.value = 0;
+				editButtonsLocked = false;
 				break;
 			case(RESPONSE_CODES.ERROR):
 				status(r.message);
@@ -642,9 +758,9 @@ function recreateIAPs(){
 	let message = COMMANDS.recreate;
 	message.options.appId = selectedApp.id;
 
-	let button = document.getElementById("dialog_main_button_recreate");
-	defaultButtonColor = button.style.backgroundColor;
-	button.style.backgroundColor = "#FDD";
+	// let button = document.getElementById("dialog_main_button_recreate");
+	// defaultButtonColor = button.style.backgroundColor;
+	// button.style.backgroundColor = "#FDD";
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
@@ -659,124 +775,108 @@ function recreateIAPs(){
 			default:
 				status(r);
 		}
-	})
+	});
 
 	return false;
 }
 
+function downloadIAPs(){
+	let message = COMMANDS.downloadIAPs;
+	message.options.appId = selectedApp.id;
+
+	status("Loading...")
+
+	sendCommand(message, (r)=>{
+		if (r.errorCount > 0) status("Failed to download " + r.errorCount + " IAPs");
+		//initTable("spreadsheet_edit", rsMatrix, cMatrix);
+		tables["spreadsheet_edit"].clear();
+		addOrders(tables["spreadsheet_edit"], r.data);
+	});
+
+	return false;
+}
+
+ipcRenderer.on("statusUpdate", (event, arg) => {
+	status(arg);
+});
 ipcRenderer.on("progressUpdate", (event, arg) => {
-	function updateCaption(source, icon){
-		return icon + source.substr(2);
+	const ICON_INITIAL = "⬜";
+	const ICON_INPROGRESS = "💫";
+	const ICON_OK = "✅";
+	const ICON_FAIL = "❌";
+	const ICON_WARNING = "⚠️";
+	const ICON_UNKNOWN = "❓";
+	const ICON_APOL = "🏳️‍🌈";
+	function iconByStatus(status){
+		switch (status){
+			case ("initial"):      return ICON_INITIAL + " ";
+			case ("inprogress"):   return ICON_INPROGRESS + " ";
+			case ("done_ok"):      return ICON_OK + " ";
+			case ("done_warning"): return ICON_WARNING + " ";
+			case ("done_fail"):    return ICON_FAIL + " ";
+			case ("done_badapol"): return ICON_APOL + " ";
+			default:               return ICON_UNKNOWN + " ";
+		}
 	}
-
-	//console.log(arg);
-
-	const PROGRESS_INIT    = "💬 ";
-	const PROGRESS_IN_WORK = "✨ ";
-	const PROGRESS_DONE    = "✅ ";
-	const PROGRESS_FAIL    = "❌ ";
-	const PROGRESS_WARNING = "⚠️ ";
-	const PROGRESS_UNKNOWN = "❓ ";
-	const PROGRESS_APOL    = "🏳️‍🌈 ";
 
 	const ID_PREFIX = "progressList_";
 
 	const AGRESSIVE_HOVER = true;
 
-	switch (arg.type){
-		case("init"): {
-			let dialog = document.getElementById("dialog_progress");
-			dialog.innerHTML = "";
-			dialog.style.display = "block";
+	let dialog = document.getElementById("dialog_progress");
+	dialog.innerHTML = "";
+	dialog.style.display = "block";
+	let list = document.getElementById("mainProgressList");
+	list = document.createElement("ul");
+	list.className = "progressList";
 
-			/*
-			arg {
-				type: "",
-				tasks: [
-					{
-						name: "",
-						id: ""
-						steps: [
-							{
-								name: "",
-								id: ""
-							}
-						]
-					}
-				]
-			}
-			*/
-			let list = document.createElement("ul");
-			list.className = "progressList";
-
-			for (let task of arg.tasks){
-				let item = document.createElement("li");
-				item.dataset.name = item.textContent = PROGRESS_INIT + task.name;
-				item.id = ID_PREFIX + task.id;
-				item.className = "progressItem";
-				
-				if (AGRESSIVE_HOVER){
-					item.addEventListener("mouseenter", e => {
-						if (item.dataset.message)
-							item.textContent = item.dataset.message;
-					});
-					item.addEventListener("mouseleave", e => {
-						item.textContent = item.dataset.name;
-					});
-				}
-
-				let sublist = document.createElement("ul");
-				for (let step of task.steps){
-					let stepItem = document.createElement("li");
-					stepItem.dataset.name = stepItem.textContent = PROGRESS_INIT + step.name;
-					stepItem.id = ID_PREFIX + step.id;
-					stepItem.className = "progressItem";
-					
-					if (AGRESSIVE_HOVER){
-						stepItem.addEventListener("mouseenter", e => {
-							if (stepItem.dataset.message)
-								stepItem.textContent = stepItem.dataset.message;
-						});
-						stepItem.addEventListener("mouseleave", e => {
-							stepItem.textContent = stepItem.dataset.name;
-						});
-					}
-
-					sublist.appendChild(stepItem);
-				}
-				list.appendChild(item)
-				if (task.steps.length > 0)
-					list.appendChild(sublist);
-			}
-			dialog.appendChild(list);
-
-			break;
+	for (let task of arg){
+		let item = document.createElement("li");
+		item.dataset.name = item.textContent = iconByStatus(task.status) + task.name;
+		if (task.message){
+			item.dataset.message = item.title = task.message;
 		}
-		case("update"): {
-			/*
-			arg {
-				id: "",
-				status = inwork | done_ok | done_warn | done_fail
-			}
-			*/
-			let item = document.getElementById(ID_PREFIX + arg.id);
-			switch (arg.status){
-				case ("inwork"):       item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_IN_WORK); break;
-				case ("done_ok"):      item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_DONE);    break;
-				case ("done_warning"): item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_WARNING); break;
-				case ("done_fail"):    item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_FAIL);    break;
-				case ("done_badapol"): item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_APOL);    break;
-				default:               item.textContent = item.dataset.name = updateCaption(item.dataset.name, PROGRESS_UNKNOWN); break;
-			}
-			if (arg.message) 
-				if (AGRESSIVE_HOVER)
-					item.dataset.message = arg.message;
-				else
-					item.title = arg.message;
-
-			break;
+		item.id = ID_PREFIX + task.id;
+		item.className = "progressItem";
+		
+		if (AGRESSIVE_HOVER){
+			item.addEventListener("mouseenter", e => {
+				if (item.dataset.message)
+					item.textContent = item.dataset.message;
+			});
+			item.addEventListener("mouseleave", e => {
+				item.textContent = item.dataset.name;
+			});
 		}
+
+		let sublist = document.createElement("ul");
+		for (let step of task.steps){
+			let stepItem = document.createElement("li");
+			stepItem.dataset.name = stepItem.textContent = iconByStatus(step.status) + step.name;
+			if (step.message) {
+				stepItem.dataset.message = stepItem.title = step.message;
+			}
+			stepItem.id = ID_PREFIX + step.id;
+			stepItem.className = "progressItem";
+			
+			if (AGRESSIVE_HOVER){
+				stepItem.addEventListener("mouseenter", e => {
+					if (stepItem.dataset.message)
+						stepItem.textContent = stepItem.dataset.message;
+				});
+				stepItem.addEventListener("mouseleave", e => {
+					stepItem.textContent = stepItem.dataset.name;
+				});
+			}
+
+			sublist.appendChild(stepItem);
+		}
+		list.appendChild(item)
+		if (task.steps.length > 0)
+			list.appendChild(sublist);
 	}
+
+	dialog.appendChild(list);
 });
 
 function sendCommand(command, callback){

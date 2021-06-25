@@ -50,8 +50,7 @@
 		</div>
 
 		<div id="content">
-			
-			
+			<!--<div class="dialogDebug"></div>-->
 			<div id="status"></div>
 			<div class="dialog" id="dialog_progress"></div>
 			<div class="dialog" id="dialog_login">
@@ -73,14 +72,28 @@
 			<div class="dialog" id="dialog_team"></div>
 			<div class="dialog" id="dialog_apps"></div>
 			<div class="dialog" id="dialog_main">
+				<div id="dialog_main_appname"></div>
 				<div class="xbutton" onclick="listApps()">Back to app list</div>
-				<div class="xbutton" id="dialog_main_button_create" onclick="createIAPs();">Start IAP creation</div>
+				<!--<div class="xbutton" id="dialog_main_button_create" onclick="createIAPs();">Start IAP creation</div>-->
 				<!--<div class="xbutton" id="dialog_main_button_recreate" onclick="recreateIAPs();">Start recreating</div>-->
+				<div class="xradio_host" id="mode" onclick="switchMode(event)">
+					<div class="xradio" id="xr_create">Create</div><div class="xradio" id="xr_edit">Edit</div>
+				</div>
+			</div>
+			<div class="dialog" id="dialog_sheet_create">
 				<input type="file" id="filePicker" onchange="addFromFile(this.files[0]);"></input>
 				<label class="xbutton" for="filePicker">Load from file</label>
+				<div class="slidecontainer">
+					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_create_confirmer" oninput="refreshCreateConfirmer(this)" onmouseup="resetCreateConfirmer(this)">
+				</div>
+				<div id="spreadsheet_create" style="font-size: 10pt;"></div>
 			</div>
-			<div class="dialog" id="dialog_sheet">
-				<div id="spreadsheet"></div>
+			<div class="dialog" id="dialog_sheet_edit">
+				<div class="xbutton" id="dialog_button_download" onclick="downloadIAPs();">Download existing IAPs</div>
+				<!--<div class="slidecontainer">
+					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_edit_confirmer" oninput="refreshEditConfirmer(this)" onmouseup="resetEditConfirmer(this)">
+				</div>-->
+				<div id="spreadsheet_edit" style="font-size: 10pt;"></div>
 			</div>
 		</div>
 	</body>

@@ -182,6 +182,7 @@ input[type="file"] {
 	min-width: 160px;
 	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
 	z-index: 1;
+	cursor: pointer;
 }
 
 .dropdown-content a {
@@ -219,8 +220,57 @@ input[type="file"] {
 
 .progressItem{
 	white-space: pre-line;
+	cursor: pointer;
 }
 
 .progressItem:hover{
 	background-color: rgba(255, 255, 255, .2);
+}
+
+.slidecontainer {
+	width: 100%;
+}
+
+.slider {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 70%;
+	height: 42px;
+	background: #333;
+	border-radius: 7px;
+	outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 170px;
+	height: 42px;
+	background: url("./confirm.png");
+	background-size: cover;
+	background-position: center;
+	border-radius: 7px;
+	cursor: pointer;
+}
+  
+.slider::-moz-range-thumb {
+	width: 170px;
+	height: 42px;
+	background: url("./confirm.png");
+	background-size: cover;
+	background-position: center;
+	border-radius: 7px;
+	cursor: pointer;
+}
+
+.easterSlider::-webkit-slider-thumb {
+	background: url("http://n6.femjoy.com/free/16864111_gur063_ahq233/pics/014.jpg");
+	background-size: cover;
+	background-position: center;
+}
+
+.easterSlider::-moz-range-thumb {
+	background: url("http://n6.femjoy.com/free/16864111_gur063_ahq233/pics/014.jpg");
+	background-size: cover;
+	background-position: center;
 }
