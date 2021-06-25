@@ -1,9 +1,12 @@
 const http = require('http');   //For server
 const https = require('https'); //For apol
 const fs = require('fs');       //For fuck's sake (storage)
+const zlib = require("zlib");   //For reading apol POST responses (really)
 
 const hostname = "127.0.0.1";
 const port = 7071;
+
+const DEBUG_MODE = false;
 
 let storage = {};
 function loadStorage(){
@@ -51,10 +54,18 @@ server.listen(port, hostname, () => {
 
 	if (!storage["serviceKey"])
 		sendServiceKeyRequest().then((key) => setServiceKey(key));
-
-	let url = './client/strelitzia.html';
-	let start = (process.platform == 'darwin'? 'open': process.platform == 'win32'? 'start': 'xdg-open');
-	require('child_process').exec(start + ' ' + url);
+	
+	let path = process.execPath;
+	path = path.substring(0, path.lastIndexOf("/") + 1);
+	if (DEBUG_MODE){
+		console.log("RUNNING IN DEBUG MODE");
+	} else {
+		process.chdir(path);
+		console.log("Jumped to " + path);
+		let url = './client/strelitzia.html';
+		let start = (process.platform == 'darwin'? 'open': process.platform == 'win32'? 'start': 'xdg-open');
+		require('child_process').exec(start + ' ' + url);
+	}
 });
 
 const RESPONSE_CODES = {
@@ -64,8 +75,6 @@ const RESPONSE_CODES = {
 	OK:   3,
 	SELECT_TEAM: 4
 }
-
-const DEFAULT_FAMILY_NAME = "Subscriptions";
 
 const IAP_TYPE_C   = "consumable";
 const IAP_TYPE_NC  = "nonConsumable";
@@ -86,7 +95,7 @@ const IAP_TYPE_NAMES = {
 	"nc" : IAP_TYPE_NC
 }
 
-const endpoints = {
+const ENDPOINTS = {
 	serviceKey:            "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
 	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
 	login:                 "https://idmsa.apple.com/appleauth/auth/signin",
@@ -105,7 +114,8 @@ const endpoints = {
 	createFamily:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/",                           //appId
 	rsPriceCreate:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/subscriptions",           //appId, productId
 	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
-	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies"
+	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
+	countryCodesBetter:    "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/pricing/supportedCountries"
 }
 
 const METHOD_GET = "GET";
@@ -308,7 +318,8 @@ async function respondToCommand(command){
 			let ccParsed = JSON.parse(ccResponse).data;
 			let codesArray = [];
 			for (let country of ccParsed)
-				codesArray.push(country.countryCode2d);
+				codesArray.push(country.code);
+
 			storage.countryCodes = codesArray;
 			saveStorage();
 		}
@@ -395,10 +406,6 @@ async function respondToCommand(command){
 		async function obtainFreshPurchase(appId, productId, tries){
 			while (tries > 0){
 				let iapsResponse = await sendIAPsRequest(appId);
-				if (iapsResponse == "AUTH"){
-					response.code = RESPONSE_CODES.AUTH;
-					return(response);
-				}
 
 				let iapsParsed = JSON.parse(iapsResponse).data;
 				for (let i of iapsParsed)
@@ -411,11 +418,19 @@ async function respondToCommand(command){
 			return null;
 		}
 
+		function reportErrorsIfAny(e, target){
+			if (e && e.length > 0){
+				console.log("Errors (" + target + "): ");
+				console.log(e.join("\n"));
+				console.log("\n");
+			}
+		}
 		let currentFamily = {
 			name: null,
 			id: null
 		}
 
+		console.log("\nReceived order. Acquiring list of created families")
 		let familiesResponse = await sendFamiliesRequest(command.options.appId);
 		if (familiesResponse == "AUTH"){
 			response.code = RESPONSE_CODES.AUTH;
@@ -425,6 +440,9 @@ async function respondToCommand(command){
 			if (parsed.length >= 1){
 				currentFamily.name = parsed[0].name.value;
 				currentFamily.id = parsed[0].id;
+				console.log("Detected created family. Using \"" + currentFamily.name + "\"")
+			} else {
+				console.log("No families detected, will create a new one with name \"" + order.options.defaultFamilyName + "\"");
 			}
 		}
 
@@ -451,7 +469,7 @@ async function respondToCommand(command){
 				template.activeAddOns[0].productId = {value: order.bundle};
 				template.activeAddOns[0].referenceName = {value: order.refname};
 				//template.activeAddOns[0].pricingDurationType = {value: order.duration}; //doesn't work
-				template.name = {value: DEFAULT_FAMILY_NAME};
+				template.name = {value: order.options.defaultFamilyName};
 				template.details.value = [];
 				let famCreateResponse = await sendFamilyCreation(template, command.options.appId);
 
@@ -460,6 +478,7 @@ async function respondToCommand(command){
 
 					//Register freshly created family
 					familiesResponse = await sendFamiliesRequest(command.options.appId);
+					reportErrorsIfAny(requestErrors, order.bundle);
 					let parsed = JSON.parse(familiesResponse).data;
 					if (parsed.length >= 1){
 						currentFamily.name = parsed[0].name.value;
@@ -473,12 +492,16 @@ async function respondToCommand(command){
 					}
 
 					let detailsResponse = await sendIAPDetailsRequest(command.options.appId, found.adamId);
+					reportErrorsIfAny(requestErrors, order.bundle);
 					let freshProduct = JSON.parse(detailsResponse).data;
 					freshProduct.versions[0].details.value = [versions];
 					freshProduct.pricingDurationType = {value: order.duration};
 					
 					baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
-					if (baseResponse != "OK") console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
+					if (baseResponse != "OK") {
+						console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
+						reportErrorsIfAny(requestErrors, order.bundle);
+					}
 				} else {
 					console.log("Failed to create family, aborting");
 					break;
@@ -496,7 +519,6 @@ async function respondToCommand(command){
 				template.productId = {value: order.bundle};
 				template.referenceName = {value: order.refname};
 				template.clearedForSale = {value: true};
-
 
 				template.pricingIntervals = [{value:{
 					country: "WW",
@@ -517,9 +539,11 @@ async function respondToCommand(command){
 					response.code = RESPONSE_CODES.AUTH;
 					return(response);
 				} else {
-					response.code = RESPONSE_CODES.ERROR;
-					response.message = baseResponse;
-					return(response);
+					finishedCount += 1;
+					console.log("Fail " + finishedCount + "/" + command.options.orders.length);
+					reportErrorsIfAny(requestErrors, order.bundle);
+
+					continue;
 				}
 			}
 			if (order.type == "rs"){
@@ -535,10 +559,12 @@ async function respondToCommand(command){
 				let productId = found.adamId;
 				let pricing = buildSubscriptionPricing(determineTier(order.type, order.price));
 				let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
+				reportErrorsIfAny(requestErrors, order.bundle);
 
 				if (order.trial != "off" && pricingResponse == "OK"){
 					let trial = buildTrialRequest(order.trial, command.options.appId, productId);
 					let trialResponse = await sendTrialCreation(trial);
+					reportErrorsIfAny(requestErrors, order.bundle);
 					if (trialResponse != "OK") console.log("Failed to create trial");
 				}
 			}
@@ -546,6 +572,33 @@ async function respondToCommand(command){
 			console.log("Done " + finishedCount + "/" + command.options.orders.length);
 		}
 		console.log("Finished");
+		response.code = RESPONSE_CODES.OK;
+		return (response);
+	}
+	case ("RECREATE"):{
+		//let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
+		let iapsResponse = await sendIAPsRequest(command.options.appId);
+
+		let iapsParsed = JSON.parse(iapsResponse).data;
+		for (let i of iapsParsed){
+			console.log(i.versions[i.versions.length - 1].itunesConnectStatus);
+			continue;
+
+			let detailsResponse = await sendIAPDetailsRequest(command.options.appId, i.adamId);
+			let product = JSON.parse(detailsResponse).data;
+			let lc = product.versions[0].details.value[0].value.localeCode;
+			if (lc == "en-US"){
+				product.versions[0].details.value[0].value.localeCode = "en-CA";
+			} else {
+				product.versions[0].details.value[0].value.localeCode = "en-US";
+			}
+			
+			let editResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
+			if (editResponse == "OK")
+				console.log(product.productId.value + ": Product locale edited");
+			else
+				console.log(product.productId.value + ": Failed to edit product locale");
+		}
 		response.code = RESPONSE_CODES.OK;
 		return (response);
 	}
@@ -622,103 +675,20 @@ function setServiceKey(rawdata){
 
 //Returns response body in callback
 function sendServiceKeyRequest(){
-	return genericRequest(METHOD_GET, null, endpoints.serviceKey, null);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.serviceKey, null);
 }
 
 function sendToOlympus(){
-
-	return new Promise(resolve => {
-		
-		const options = {
-			method: 'GET',
-			headers: formHeader(0)
-		}
-		
-		const req = https.request(endpoints.olympus, options, (res) => {
-			addCookiesToStorage(res.headers["set-cookie"]);
-			storage["scnt"] = res.headers["scnt"];
-			storage["sessionId"] = res.headers["x-apple-id-session-id"];
-			saveStorage();
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve("OK");
-					break;
-				
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	genericRequest("GET", null, ENDPOINTS.olympus, null);
 }
 
 function sendLogin(login, password){
-	return new Promise(resolve => {
-
-		const data = JSON.stringify({
-			accountName: login,
-			password: password,
-			rememberMe: true
-		});
-		
-		const options = {
-			method: 'POST',
-			headers: formHeader(data.length)
-		}
-
-		const req = https.request(endpoints.login, options, res => {
-			addCookiesToStorage(res.headers["set-cookie"]);
-			storage["scnt"] = res.headers["scnt"];
-			storage["sessionId"] = res.headers["x-apple-id-session-id"];
-			saveStorage();
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (412):
-					resolve("Need to acknowledge to Apple's bullshit agreements");
-					break;
-				case (401):
-					resolve("Authorization failed");
-					break;
-				case (409):
-					resolve("CODE");
-					break;
-				default:
-					resolve(m);
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.write(data);
-		req.end();
+	const data = JSON.stringify({
+		accountName: login,
+		password: password,
+		rememberMe: true
 	});
+	return genericRequest("POST", data, ENDPOINTS.login, null);
 }
 
 function sendCode(code){
@@ -727,70 +697,86 @@ function sendCode(code){
 			code: code 
 		} 
 	});
-	return genericRequest(METHOD_POST, data, endpoints.code, null);
+	return genericRequest(METHOD_POST, data, ENDPOINTS.code, null);
 }
 
 function sendUserDetails(){
-	return genericRequest(METHOD_GET, null, endpoints.userdetails, null);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.userdetails, null);
 }
 
 function sendAppsRequest(){
-	return genericRequest(METHOD_GET, null, endpoints.listApps, null);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.listApps, null);
 }
 
 function sendIAPsRequest(appId){
-	return genericRequest(METHOD_GET, null, endpoints.listIAPs, [appId]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.listIAPs, [appId]);
 }
 
 function sendFamiliesRequest(appId){
-	return genericRequest(METHOD_GET, null, endpoints.listFamilies, [appId]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.listFamilies, [appId]);
 }
 
 function sendRSMatrixRequest(appId){
-	return genericRequest(METHOD_GET, null, endpoints.priceMatrixRecurring, [appId]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.priceMatrixRecurring, [appId]);
 }
 
 function sendCMatrixRequest(appId){
-	return genericRequest(METHOD_GET, null, endpoints.priceMatrixConsumable, [appId]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.priceMatrixConsumable, [appId]);
 }
 
 function sendCountriesRequest(){
-	return genericRequest(METHOD_GET, null, endpoints.countryCodes, null);
+	//return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodes, null);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodesBetter, null);
+}
+
+function sendCountriesRequestLegacy(){
+	return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodes, null);
 }
 
 function sendTemplateRequest(appId, iapType){
-	return genericRequest(METHOD_GET, null, endpoints.iapTemplate, [appId, iapType]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.iapTemplate, [appId, iapType]);
 }
 
 function sendFamilyTemplateRequest(appId){
-	return genericRequest(METHOD_GET, null, endpoints.famTemplate, [appId]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.famTemplate, [appId]);
 }
 
 function sendIAPCreation(filledTemplate, appId){
-	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), endpoints.create, [appId]);
+	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), ENDPOINTS.create, [appId]);
 }
 
 function sendFamilyCreation(filledTemplate, appId){
-	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), endpoints.createFamily, [appId]);
+	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), ENDPOINTS.createFamily, [appId]);
 }
 
 function sendIAPDetailsRequest(appId, productId){
-	return genericRequest(METHOD_GET, null, endpoints.iapDetails, [appId, productId]);
+	return genericRequest(METHOD_GET, null, ENDPOINTS.iapDetails, [appId, productId]);
 }
 
 function sendIAPDetailsRefresh(updated, appId, productId){
-	return genericRequest(METHOD_PUT, JSON.stringify(updated), endpoints.iapDetails, [appId, productId]);
+	return genericRequest(METHOD_PUT, JSON.stringify(updated), ENDPOINTS.iapDetails, [appId, productId]);
 }
 
 function sendRSPriceCreation(pricing, appId, productId){
-	return genericRequest(METHOD_POST, JSON.stringify(pricing), endpoints.rsPriceCreate, [appId, productId]);
+	return genericRequest(METHOD_POST, JSON.stringify(pricing), ENDPOINTS.rsPriceCreate, [appId, productId]);
 }
 
 function sendTrialCreation(trial){
-	return genericRequest(METHOD_POST, JSON.stringify(trial), endpoints.trialCreate, null);
+	return genericRequest(METHOD_POST, JSON.stringify(trial), ENDPOINTS.trialCreate, null);
 }
 
-function genericRequest(method, data, endpoint, endpointParameters){
+let requestErrors = [];
+function genericRequest(method, data, endpoint, endpointParameters, tries = 7){
+	function checkForErrors(body){
+		try {
+			let r = JSON.parse(body);
+			if (r.data){
+				if (r.data.sectionErrorKeys){
+					requestErrors = r.data.sectionErrorKeys;
+				}
+			}
+		} catch (e){}
+	}
 	return new Promise(resolve => {
 		const options = {
 			method: method,
@@ -804,32 +790,68 @@ function genericRequest(method, data, endpoint, endpointParameters){
 			requestTarget = endpoint;
 		const req = https.request(requestTarget, options, res => {
 			addCookiesToStorage(res.headers["set-cookie"]);
+			if (endpoint == ENDPOINTS.login || endpoint == ENDPOINTS.olympus){
+				storage["scnt"] = res.headers["scnt"];
+				storage["sessionId"] = res.headers["x-apple-id-session-id"];
+				saveStorage();
+			}
 
 			let data = [];
 			res.on('data', chunk => {
 				data.push(chunk);
 			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-			
+			res.on('end', async () => {
+				requestErrors = [];
+
+				let responseBody = Buffer.concat(data).toString();
+				if (res.headers["content-encoding"] == "gzip"){
+					if (method != "POST")
+						console.log("WARNING: got gzipped response to " + method + " request.\nEndpoint: " + requestTarget);
+					responseBody = zlib.gunzipSync(Buffer.concat(data)).toString();
+				}
+				checkForErrors(responseBody);
+
 				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (422):
-					resolve("MALFORMED REQUEST");
-					break;
 				case (200):
 				case (201):
 				case (204):
 					if (method == "GET")
-						resolve(m);
+						resolve(responseBody);
 					else
 						resolve("OK");
 					break;
+				case (401):
+					resolve("AUTH");
+					break;
+				case (409):
+					resolve("CODE");
+					break;
+				case (412):
+					checkForErrors(responseBody);
+					if (endpoint == ENDPOINTS.login || endpoint == ENDPOINTS.olympus)
+						resolve("Need to acknowledge to Apple's bullshit agreements");
+					else
+						resolve(responseBody)
+					break;
+				case (422):
+					checkForErrors(responseBody);
+					resolve("MALFORMED REQUEST");
+					break;
+				case (502):
+				case (503):
+				case (504):
+					if (tries <= 0){
+						let message = `Request failed after retries: ${res.statusCode} at ${endpoint}`;
+						console.log(message);
+						console.log(responseBody);
+						resolve(message);
+					} else {
+						let r = await genericRequest(method, data, endpoint, endpointParameters, tries - 1);
+						resolve(r);
+					}
 				default:
 					console.log(`Unknown status: ${res.statusCode} at ${endpoint}`);
-					resolve(m);
+					resolve(responseBody);
 					break;
 				}
 			});

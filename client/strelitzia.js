@@ -44,6 +44,13 @@ const COMMANDS = {
 			orders: []
 		}
 	},
+	recreate: {
+		command: "RECREATE",
+		options: {
+			appId: "0",
+			orders: []
+		}
+	},
 	service: {
 		command: "SERVICE",
 		options: {
@@ -58,7 +65,7 @@ const RESPONSE_CODES = {
 	OK:   3,
 	SELECT_TEAM: 4
 };
-let selectedApp = "";
+let selectedApp = null;
 
 let radios = [];
 
@@ -79,35 +86,6 @@ function onRadioChange(group, selected){
 			option.className = "xradio xradio_selected";
 		else
 			option.className = "xradio";
-	}
-
-	if (group.startsWith("dialog_create_iap_type")){
-		let host = document.getElementById(group);
-		let form = document.getElementById(group.replace("dialog_create_iap_type_", "dialog_create_"));
-
-		let s = form.querySelectorAll(".rsonly");
-		let c = form.querySelectorAll(".conly");
-		switch(selected){
-			case("rs"):
-				for (let el of s){
-					el.style = "display: block";
-				}
-				for (let el of c){
-					el.style = "display: none";
-				}
-
-				break;
-			case("c"):
-			case("nc"):
-
-				for (let el of c){
-					el.style = "display: block";
-				}
-				for (let el of s){
-					el.style = "display: none";
-				}
-				break;
-		}
 	}
 }
 
@@ -133,6 +111,61 @@ function initRadio(host){
 	}
 }
 
+const IAP_TYPES  = ["rs", "nc", "c"];
+const IAP_DURS   = ["1w", "1m", "2m", "3m", "6m", "1y"];
+const IAP_TRIALS = ["off", "3d"];//, "1w", "1m", "2m", "3m", "6m", "1y"];
+
+let table = null;
+function initSheet(rsMatrix, cMatrix){
+	if (table) {
+		table.destroy(); 
+	}
+
+	let rsPrices = [];
+	for (let rsPrice of rsMatrix){
+		rsPrices.push(rsPrice.price);
+	}
+	let сPrices = [];
+	for (let сPrice of cMatrix){
+		сPrices.push(сPrice.price);
+	}
+	let container = document.getElementById("spreadsheet");
+	table = new Handsontable(container, {
+		data: [],
+		rowHeaders: true,
+		colHeaders: ["Type", "Reference Name", "Bundle Suffix", "Price (RS)", "Price (C/NC)", "Duration", "Trial", "Name (en-US)", "Description (en-US)"],
+		columns: [
+			{
+				type: "dropdown",
+				source: IAP_TYPES
+			},
+			{},
+			{},
+			{
+				type: "dropdown",
+				source: rsPrices
+			},
+			{
+				type: "dropdown",
+				source: сPrices
+			},
+			{
+				type: "dropdown",
+				source: IAP_DURS
+			},
+			{
+				type: "dropdown",
+				source: IAP_TRIALS
+			},
+			{},
+			{}
+		],
+		minSpareRows: 1,
+		licenseKey: "non-commercial-and-evaluation"
+	});
+
+	return table;
+}
 
 function start(){
 	let subs = [
@@ -183,425 +216,106 @@ function startAppSelect(apps){
 		let option = document.createElement("div");
 		option.className = "xbutton";
 		option.textContent = a.name + " : " + a.bundle;
-		option.onclick = () => {selectApp(a.bundle, a.id);};
+		option.onclick = () => {selectApp(a);};
 		appSelector.appendChild(option);
 	}
 	appSelector.style.display = "inline-block";
 }
 
-function createCreationForm(parent, appBundle, formId){
-
-	function createRadio(id, options){
-		let host = document.createElement("div");
-		host.className = "xradio_host";
-		host.id = id;
-
-		for (let o of options){
-			let option = document.createElement("div");
-			option.className = "xradio";
-			option.id = o.id;
-			option.textContent = o.name;
-			host.appendChild(option);
-		}
-
-		return host;
-	}
-
-	let item = document.createElement("div");
-	item.className = "subgroup";
-	item.id = "dialog_create_" + formId;
-
-	let typeGroup = document.createElement("div");
-	typeGroup.className = "subgroup";
-
-	let typeTitle = document.createElement("div");
-	typeTitle.textContent = "IAP type";
-	typeGroup.appendChild(typeTitle);
-
-	let typeRadio = createRadio("dialog_create_iap_type_" + formId, [
-		{
-			id: "rs",
-			name: "RS"
-		},{
-			id: "c",
-			name: "C"
-		},{
-			id: "nc",
-			name: "NC"
-		}
-	]);
-	typeGroup.appendChild(typeRadio);
-
-	item.appendChild(typeGroup);
-
-
-	let nameGroup = document.createElement("div");
-	nameGroup.className = "subgroup";
-
-	let refnameTitle = document.createElement("div");
-	refnameTitle.textContent = "Reference name";
-	nameGroup.appendChild(refnameTitle);
-
-	let refnameInput = document.createElement("input");
-	refnameInput.type = "text";
-	refnameInput.id = "dialog_create_iap_refname";
-	refnameInput.class = "longinput";
-	refnameInput.placeholder = "1 month gold";
-	nameGroup.appendChild(refnameInput);
-
-	let bundleTitle = document.createElement("div");
-	bundleTitle.textContent = "IAP bundle name";
-	bundleTitle.style = "margin-top: 10px";
-
-	nameGroup.appendChild(bundleTitle);
-
-	let bundlePrefix = document.createElement("div");
-	bundlePrefix.textContent = appBundle + ".";
-	nameGroup.appendChild(bundlePrefix);
-
-	let bundleInput = document.createElement("input");
-	bundleInput.type = "text";
-	bundleInput.id = "dialog_create_iap_bundle";
-	bundleInput.class = "longinput";
-	bundleInput.placeholder = "silver.1m";
-	bundlePrefix.appendChild(bundleInput);
-
-	item.appendChild(nameGroup);
-	
-
-	let durGroup = document.createElement("div");
-	durGroup.className = "subgroup rsonly";
-
-	let durTitle = document.createElement("div");
-	durTitle.textContent = "IAP duration";
-	durGroup.appendChild(durTitle);
-
-	let durRadio = createRadio("dialog_create_iap_duration_" + formId, [
-		{
-			id: "1w",
-			name: "1w"
-		},
-		{
-			id: "1m",
-			name: "1m"
-		},
-		{
-			id: "2m",
-			name: "2m"
-		},
-		{
-			id: "3m",
-			name: "3m"
-		},
-		{
-			id: "6m",
-			name: "6m"
-		},
-		{
-			id: "1y",
-			name: "1y"
-		}
-	]);
-	durGroup.appendChild(durRadio);
-
-	item.appendChild(durGroup);
-	
-
-	let trialGroup = document.createElement("div");
-	trialGroup.className = "subgroup rsonly";
-
-	let trialTitle = document.createElement("div");
-	trialTitle.textContent = "IAP trial";
-	trialGroup.appendChild(trialTitle);
-
-	let trialRadio = createRadio("dialog_create_iap_trial_" + formId, [
-		{
-			id: "off",
-			name: "off"
-		},
-		{
-			id: "3d",
-			name: "3d"
-		},
-		{
-			id: "1w",
-			name: "1w"
-		},
-		{
-			id: "1m",
-			name: "1m"
-		},
-		{
-			id: "2m",
-			name: "2m"
-		},
-		{
-			id: "3m",
-			name: "3m"
-		},
-		{
-			id: "6m",
-			name: "6m"
-		},
-		{
-			id: "1y",
-			name: "1y"
-		}
-	]);
-	trialGroup.appendChild(trialRadio);
-
-	item.appendChild(trialGroup);
-
-	
-	let rsPriceGroup = document.createElement("div");
-	rsPriceGroup.className = "subgroup rsonly";
-
-	let rsPricePrefix = document.createElement("div");
-	rsPricePrefix.textContent = "Price: ";
-
-	let rsPriceInput = document.createElement("input");
-	rsPriceInput.type = "text";
-	rsPriceInput.id = "dialog_create_iap_rsPrice";
-	rsPriceInput.className = "shortinput";
-	rsPriceInput.setAttribute('list', "rsdatalist");
-	rsPricePrefix.appendChild(rsPriceInput);
-	
-	rsPriceGroup.appendChild(rsPricePrefix);
-
-	item.appendChild(rsPriceGroup);
-
-	
-	let cPriceGroup = document.createElement("div");
-	cPriceGroup.className = "subgroup conly";
-
-	let cPricePrefix = document.createElement("div");
-	cPricePrefix.textContent = "Price: ";
-
-	let cPriceInput = document.createElement("input");
-	cPriceInput.type = "text";
-	cPriceInput.id = "dialog_create_iap_cPrice";
-	cPriceInput.className = "shortinput";
-	cPriceInput.setAttribute('list', "cdatalist")
-	cPricePrefix.appendChild(cPriceInput);
-	
-	cPriceGroup.appendChild(cPricePrefix);
-
-	item.appendChild(cPriceGroup);
-
-
-	let versionGroup = document.createElement("div");
-	versionGroup.className = "subgroup";
-
-	let versionTitle = document.createElement("div");
-	versionTitle.textContent = "en-US";
-	versionGroup.appendChild(versionTitle);
-
-	let nameInput = document.createElement("input");
-	nameInput.type = "text";
-	nameInput.id = "dialog_create_iap_name";
-	nameInput.className = "longinput";
-	nameInput.placeholder = "Name";
-	versionGroup.appendChild(nameInput);
-
-	let descInput = document.createElement("input");
-	descInput.type = "text";
-	descInput.id = "dialog_create_iap_desc";
-	descInput.className = "longinput";
-	descInput.placeholder = "Description";
-	versionGroup.appendChild(descInput);
-
-
-	item.appendChild(versionGroup);
-
-	parent.appendChild(item);
-
-	initRadio(typeRadio);
-	initRadio(durRadio);
-	initRadio(trialRadio);
-}
-
-function radioSelected(id){
-	return document.getElementById(id).querySelector(".xradio_selected").id;
-}
-
-/*
-data = {
-	all strings
-
-	type:    rs | nc | c
-	refname: 1 month gold
-	bundle:  com.pom.bum
-
-	//rs-specific
-	data.duration = 1y
-	data.trial    = 3d
-	data.price    = 0.99
-	
-	//c-specific
-	data.price    = 0.99
-	version: {
-		name: IAP Name
-		desc: IAP Description
-	}
-}
-*/
-
-function collectData(appBundle, formId){
-	let form = document.getElementById("dialog_create_" + formId);
-	let data = {
-		type:    radioSelected("dialog_create_iap_type_" + formId),
-		refname: form.querySelector("#dialog_create_iap_refname").value,
-		bundle:  appBundle + "." + form.querySelector("#dialog_create_iap_bundle").value,
-
-		version: {
-			name: form.querySelector("#dialog_create_iap_name").value,
-			desc: form.querySelector("#dialog_create_iap_desc").value
-		}
-	};
-	if (data.type == "rs"){
-		data.duration = radioSelected("dialog_create_iap_duration_" + formId);
-		data.trial    = radioSelected("dialog_create_iap_trial_" + formId);
-		data.price    = form.querySelector("#dialog_create_iap_rsPrice").value;
-	} else {
-		data.price    = form.querySelector("#dialog_create_iap_cPrice").value;
-	}
-	return data;
-}
-
-function setData(data, formId){
-	let form = document.getElementById("dialog_create_" + formId);
-
-	onRadioChange("dialog_create_iap_type_" + formId, data.type);
-	form.querySelector("#dialog_create_iap_refname").value = data.refname;
-	form.querySelector("#dialog_create_iap_bundle").value = data.bundle
-
-	form.querySelector("#dialog_create_iap_name").value = data.version.name;
-	form.querySelector("#dialog_create_iap_desc").value = data.version.desc;
-
-	if (data.type == "rs"){
-		onRadioChange("dialog_create_iap_duration_" + formId, data.duration);
-		onRadioChange("dialog_create_iap_trial_" + formId, data.trial);
-		form.querySelector("#dialog_create_iap_rsPrice").value = data.price;
-	} else {
-		form.querySelector("#dialog_create_iap_cPrice").value = data.price;
-	}
-}
-
-function isValid(data){
-	if (!["rs", "nc", "c"].includes(data.type))
+function isValid(order){
+	if (!["rs", "nc", "c"].includes(order.type))
 		return false;
 	
-	if (data.refname.length < 2)
+	if (order.refname.length < 2)
 		return false;
 	
-	if (data.bundle.length < 2)
+	if (order.bundle.length < 2)
 		return false;
 
-	if (data.version.name.length < 2)
+	if (order.version.name.length < 2)
 		return false;
 
-	if (data.version.desc.length < 2)
+	if (order.version.desc.length < 2)
 		return false;
 
-	if (data.type == "rs"){
-		if (!["1w", "1m", "2m", "3m", "6m", "1y"].includes(data.duration))
+	if (order.type == "rs"){
+		if (!["1w", "1m", "2m", "3m", "6m", "1y"].includes(order.duration))
 			return false;
 
-		if (!["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(data.trial))
+		if (!["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(order.trial))
 			return false;
 	}
 
 	return true;
 }
 
-let creationDialogItemCount = 0;
-function startCreationDialog(cMatrix, rsMatrix, appBundle, appId){
-	status(appBundle);
-	hideAllDialogs();
-	let dialog = document.getElementById("dialog_create");
-	dialog.innerHTML = "";
+function collectOrders(sheet, appBundle){
+	let source = sheet.getData();
+	let harvested = [];
+	for (let row of source){
+		if (!row[0]) continue;
+		let productId = row[2];
+		if (!productId.startsWith(appBundle)){
+			if (productId.startsWith("."))
+				productId = appBundle + productId;
+			else
+				productId = appBundle + "." + productId;
+		}
 
-	if (!document.getElementById("cdatalist")){
-		let cDatalist = document.createElement("datalist");
-		cDatalist.id = "cdatalist";
-		for (let c of cMatrix){
-			let cOption = document.createElement("option");
-			cOption.value = c.price;
-			cDatalist.appendChild(cOption);
-		}
-		dialog.appendChild(cDatalist);
-	}
-	if (!document.getElementById("rsdatalist")){
-		let rsDatalist = document.createElement("datalist");
-		rsDatalist.id = "rsdatalist";
-		for (let rs of rsMatrix){
-			let rsOption = document.createElement("option");
-			rsOption.value = rs.price;
-			rsDatalist.appendChild(rsOption);
-		}
-		dialog.appendChild(rsDatalist);
-	}
+		let entry = {
+			type:    row[0],
+			refname: row[1],
+			bundle:  productId,
 	
-	let back = document.createElement("div");
-	back.className = "xbutton";
-	back.textContent = "Back to app list";
-	back.onclick = () => {
-		listApps();
-	}
-	dialog.appendChild(back);
-
-	let start = document.createElement("div");
-	start.className = "xbutton";
-	start.textContent = "Start IAP creation";
-	start.onclick = () => {
-		start.onclick = null;
-		back.remove();
-		start.remove();
-		let order = [];
-		for (let i = 0; i < creationDialogItemCount; ++i){
-			order.push(collectData(appBundle, i));
+			version: {
+				name: row[7],
+				desc: row[8]
+			}
+		};
+		if (entry.type == "rs"){
+			entry.duration = row[5];
+			entry.trial    = row[6];
+			entry.price    = row[3];
+		} else {
+			entry.price    = row[4];
 		}
-		createIAP(order, appId);
-	}
-	dialog.appendChild(start);
-
-	let picker = document.createElement("input");
-	picker.type = "file";
-	picker.id = "filePicker";
-	picker.setAttribute("for", "filePicker");
-	dialog.appendChild(picker);
-
-	let pickerButton = document.createElement("label");
-	pickerButton.className = "xbutton";
-	pickerButton.textContent = "Load from file";
-	pickerButton.setAttribute("for", "filePicker");
-	dialog.appendChild(pickerButton);
-	
-	let addItem = document.createElement("div");
-	addItem.className = "xbutton";
-	addItem.textContent = "Add order";
-	addItem.onclick = () => {
-		createCreationForm(dialog, appBundle, "" + creationDialogItemCount);
-		creationDialogItemCount += 1;
-	}
-	dialog.appendChild(addItem);
-	
-	let remItem = document.createElement("div");
-	remItem.className = "xbutton";
-	remItem.textContent = "Remove last order";
-	remItem.onclick = () => {
-		if (creationDialogItemCount > 0){
-			document.getElementById("dialog_create_" + (creationDialogItemCount - 1)).remove();
-			creationDialogItemCount -= 1;
+		if (isValid(entry))
+			harvested.push(entry);
+		else {
+			showModal("INVALID ENTRIES DETECTED");
+			return [];
 		}
 	}
-	dialog.appendChild(remItem);
+	return harvested;
+}
 
+function addOrders(sheet, data){
+	let row = sheet.countRows() - 1;
+	let newCells = [];
+	for (let entry of data){
+		newCells.push([row, 0, entry.type]);
+		newCells.push([row, 1, entry.refname]);
+		newCells.push([row, 2, entry.bundle]);
+		newCells.push([row, 7, entry.version.name]);
+		newCells.push([row, 8, entry.version.desc]);
+		if (entry.type == "rs"){
+			newCells.push([row, 3, entry.price]);
+			newCells.push([row, 5, entry.duration]);
+			newCells.push([row, 6, entry.trial]);
+		} else {
+			newCells.push([row, 4, entry.price]);
+		}
+		row += 1;
+	}
+	sheet.setDataAtCell(newCells);
+}
+function addFromFile(file){
 	function processCSV(rawData){
 		let ignoreRows = [];
 		for (let e of rawData.errors){
 			ignoreRows.push("" + e.row);
 		}
+		let processed = [];
 		for (let i in rawData.data){
 			if (ignoreRows.includes(i)) continue;
 
@@ -621,26 +335,25 @@ function startCreationDialog(cMatrix, rsMatrix, appBundle, appId){
 				data.duration = row["Duration"];
 				data.trial    = row["Trial"] == "" ? "off" : row["Trial"];
 			}
-
-			if (isValid(data)){
-				addItem.onclick();
-				setData(data, creationDialogItemCount - 1);
-			} else {
-				console.log("Invalid entry at row " + i);
-				console.log(data);
-			}
+			processed.push(data);
 		}
+		addOrders(table, processed);
 	}
 
-	picker.addEventListener('change', function(){
-		Papa.parse(picker.files[0], {
-			header: true,
-			complete: function(results) {
-				processCSV(results);
-			}
-		});
+	Papa.parse(file, {
+		header: true,
+		complete: function(results) {
+			processCSV(results);
+		}
 	});
-
+}
+function startMainDialog(cMatrix, rsMatrix, appBundle, appId){
+	status(appBundle);
+	hideAllDialogs();
+	let dialogSheet = document.getElementById("dialog_sheet");
+	dialogSheet.style.display = "block";
+	initSheet(rsMatrix, cMatrix);
+	let dialog = document.getElementById("dialog_main");
 	dialog.style.display = "block";
 }
 
@@ -837,17 +550,17 @@ function listApps(){
 	return false;
 }
 
-function selectApp(bundle, id){
+function selectApp(app){
 	status("");
-	selectedApp = id;
+	selectedApp = app;
 
 	let message = COMMANDS.selectApp;
-	message.options.appId = id;
+	message.options.appId = app.id;
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
-				startCreationDialog(r.cMatrix, r.rsMatrix, bundle, id);
+				startMainDialog(r.cMatrix, r.rsMatrix, app.bundle, app.id);
 				break;
 			default:
 				status(r);
@@ -857,17 +570,57 @@ function selectApp(bundle, id){
 	return false;
 }
 
-function createIAP(orders, appId){
+let defaultButtonColor;
+let buttonsLocked = false;
+function createIAPs(){
+	if (buttonsLocked) return;
+	buttonsLocked = true;
 	status("IAP creation process is initiated. You can observe progress using console.");
 	
 	let message = COMMANDS.create;
-	message.options.appId = appId;
-	message.options.orders = orders;
+	message.options.appId = selectedApp.id;
+	message.options.orders = collectOrders(table, selectedApp.bundle);
+
+	let button = document.getElementById("dialog_main_button_create");
+	defaultButtonColor = button.style.backgroundColor;
+	button.style.backgroundColor = "#FDD";
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
-				status("OK");
+				status("Finished, check console");
+				button.style.backgroundColor = defaultButtonColor;
+				buttonsLocked = false;
+				break;
+			case(RESPONSE_CODES.ERROR):
+				status(r.message);
+				break;
+			default:
+				status(r);
+		}
+	})
+
+	return false;
+}
+
+function recreateIAPs(){
+	if (buttonsLocked) return;
+	buttonsLocked = true;
+	status("IAP creation process is initiated. You can observe progress using console.");
+
+	let message = COMMANDS.recreate;
+	message.options.appId = selectedApp.id;
+
+	let button = document.getElementById("dialog_main_button_recreate");
+	defaultButtonColor = button.style.backgroundColor;
+	button.style.backgroundColor = "#FDD";
+
+	sendCommand(message, (r)=>{
+		switch(r.code){
+			case(RESPONSE_CODES.OK):
+				status("Finished, check console");
+				button.style.backgroundColor = defaultButtonColor;
+				buttonsLocked = false;
 				break;
 			case(RESPONSE_CODES.ERROR):
 				status(r.message);
