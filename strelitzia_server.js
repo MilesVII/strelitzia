@@ -13,6 +13,8 @@ const RESPONSE_CODES = {
 	SELECT_TEAM: 4
 }
 
+const DEFAULT_FAMILY_NAME = "Subscriptions";
+
 const IAP_TYPE_C   = "consumable";
 const IAP_TYPE_NC  = "nonConsumable";
 const IAP_TYPE_RS  = "recurring";
@@ -253,6 +255,16 @@ async function respondToCommand(command){
 			}
 		}
 
+		if (!storage.countryCodes){
+			let ccResponse = await sendCountriesRequest();
+			let ccParsed = JSON.parse(ccResponse).data;
+			let codesArray = [];
+			for (let country of ccParsed)
+				codesArray.push(country.countryCode2d);
+			storage.countryCodes = codesArray;
+			saveStorage();
+		}
+
 		
 		response.code = RESPONSE_CODES.OK;
 		response.rsMatrix = storage.rsMatrix;
@@ -260,6 +272,98 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("CREATE_IAP"):{
+		function determineTier(type, price){
+			for (let t of (type == "rs") ? storage.rsMatrix : storage.cMatrix){
+				if (price == t.price){
+					return t.tier;
+				}
+			}
+			return 0;
+		}
+
+		function buildSubscriptionPricing(tier){
+			let data = {
+				subscriptions: []
+			}
+			for (let code of storage.countryCodes){
+				let entry = {
+					errorKeys: null,
+					isEditable: true,
+					isRequired: false,
+					value: {
+						country: code,
+						grandfathered: {
+							value: "FUTURE_NONE", 
+							isEditable: false, 
+							isRequired: false, 
+							errorKeys: null
+						},
+						priceTierEffectiveDate: null,
+						priceTierEndDate: null,
+						tierStem: tier
+					}
+				}
+				data.subscriptions.push(entry);
+			}
+			return data;
+		}
+
+		function buildTrialRequest(trial, appId, productId){
+			function pad(num, size) {
+				let s = "00" + num;
+				return s.substr(s.length - size);
+			}
+			let d = new Date();
+			
+			let currentDate = "" + d.getFullYear() + "-" + pad((d.getMonth() + 1), 2) + "-" + pad(d.getDate(), 2);
+			let data = {
+				batch: [{
+					method: "POST",
+					path: "/apps/" + appId + "/iaps/" + productId + "/pricing/intro-offers",
+					value: {
+						introOffers: []
+					}
+				}]
+			}
+			for (let code of storage.countryCodes){
+				let entry = {
+					errorKeys: null,
+					isEditable: true,
+					isRequired: true,
+					value: {
+						country: code,
+						durationType: trial,
+						numOfPeriods: 1,
+						offerModeType: "FreeTrial",
+						startDate: currentDate,
+						endDate: null,
+						tierStem: null	
+					}
+				}
+				data.batch[0].value.introOffers.push(entry);
+			}
+			return data;
+		}
+
+		async function obtainFreshPurchase(appId, productId, tries){
+			while (tries > 0){
+				let iapsResponse = await sendIAPsRequest(appId);
+				if (iapsResponse == "AUTH"){
+					response.code = RESPONSE_CODES.AUTH;
+					return(response);
+				}
+
+				let iapsParsed = JSON.parse(iapsResponse).data;
+				for (let i of iapsParsed)
+					if (i.vendorId == productId)
+						return i;
+
+				console.log("apple is shid")
+				tries -= 1;
+			}
+			return null;
+		}
+
 		let currentFamily = {
 			name: null,
 			id: null
@@ -278,33 +382,79 @@ async function respondToCommand(command){
 		}
 
 		for (let order of command.options.orders){
-			if (order.type == "rs" && !currentFamily.name){
-				//process order via family creation
-			}
-
-			let templateResponse = await sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
-			if (templateResponse == "AUTH"){
-				response.code = RESPONSE_CODES.AUTH;
-				return response;
-			}
-
-			let template = JSON.parse(templateResponse).data;
-			template.familyId = currentFamily.id;
-			template.productId = {value: order.bundle};
-			template.referenceName = {value: order.refname};
-			template.clearedForSale = {value: true};
+			let baseResponse;
+			
 			let versions = {value: {
 				description: {value: order.version.desc},
 				name:        {value: order.version.name},
 				localeCode:  "en-US"
 			}};
-			template.versions[0].details.value = [versions];
-			if (order.type == "rs"){
-				template.pricingDurationType = {value: order.duration};
+
+			if (order.type == "rs" && !currentFamily.name){
+				//Create subscription together with family
+				let templateResponse = await sendFamilyTemplateRequest(command.options.appId);
+				if (templateResponse == "AUTH"){
+					response.code = RESPONSE_CODES.AUTH;
+					return response;
+				}
+
+				let template = JSON.parse(templateResponse).data;
+				template.activeAddOns[0].productId = {value: order.bundle};
+				template.activeAddOns[0].referenceName = {value: order.refname};
+				//template.activeAddOns[0].pricingDurationType = {value: order.duration}; //doesn't work
+				template.name = {value: DEFAULT_FAMILY_NAME};
+				template.details.value = [];
+				let famResponse = await sendFamilyCreation(template, command.options.appId);
+
+				if (famResponse == "OK"){
+					let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
+
+					if (!found){
+						response.code = RESPONSE_CODES.ERROR;
+						response.message = "Failed to find freshly created IAP";
+						return response;
+					}
+
+					let detailsResponse = await sendIAPDetailsRequest(command.options.appId, found.adamId);
+					let freshProduct = JSON.parse(detailsResponse).data;
+					freshProduct.versions[0].details.value = [versions];
+					freshProduct.pricingDurationType = {value: order.duration};
+					
+					baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
+					if (baseResponse == "OK") console.log("перемога"); else console.log("зрада");
+				} else {
+					console.log("Failed to create family, aborting");
+					break;
+				}
 			} else {
-				//add prices for C NC
+				//Create IAP normally
+				let templateResponse = await sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
+				if (templateResponse == "AUTH"){
+					response.code = RESPONSE_CODES.AUTH;
+					return response;
+				}
+
+				let template = JSON.parse(templateResponse).data;
+				template.familyId = currentFamily.id;
+				template.productId = {value: order.bundle};
+				template.referenceName = {value: order.refname};
+				template.clearedForSale = {value: true};
+
+
+				template.pricingIntervals = [{value:{
+					country: "WW",
+					tierStem: determineTier(order.type, order.price),
+					priceTierEndDate: null,
+					priceTierEffectiveDate: null
+				}}]
+
+				template.versions[0].details.value = [versions];
+				
+				if (order.type == "rs"){
+					template.pricingDurationType = {value: order.duration};
+				}
+				baseResponse = await sendIAPCreation(template, command.options.appId);
 			}
-			let baseResponse = await sendIAPCreation(template, command.options.appId);
 			if (baseResponse != "OK"){
 				if (baseResponse == "AUTH"){
 					response.code = RESPONSE_CODES.AUTH;
@@ -316,39 +466,29 @@ async function respondToCommand(command){
 				}
 			}
 			if (order.type == "rs"){
-				//Proceed
-				let tries = 7;
-				let found = null;
+				//Proceed to create pricing and trial
+				let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
 
-				while (tries > 0){
-					let iapsResponse = await sendIAPsRequest(command.options.appId);
-					if (iapsResponse == "AUTH"){
-						response.code = RESPONSE_CODES.AUTH;
-						return(response);
-					}
-
-					let iapsParsed = JSON.parse(iapsResponse).data;
-					for (let i of iapsParsed){
-						if (i.vendorId == order.bundle){
-							found = i;
-							break;
-						}
-					}
-
-					tries -= 1;
-				}
 				if (!found){
 					response.code = RESPONSE_CODES.ERROR;
 					response.message = "Failed to find freshly created IAP";
 					return response;
 				}
 				
-				let purchaseId = found.adamId;
+				let productId = found.adamId;
+				let pricing = buildSubscriptionPricing(determineTier(order.type, order.price));
+				let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
+				if (pricingResponse == "OK") console.log("Created trial");
+
+				if (order.trial != "off" && pricingResponse == "OK"){
+					let trial = buildTrialRequest(order.trial, command.options.appId, productId);
+					let trialResponse = await sendTrialCreation(trial);
+					if (trialResponse == "OK") console.log("Created trial");
+				}
 			}
-
-			return (finalResponse);
 		}
-
+		response.code = RESPONSE_CODES.OK;
+		return (response);
 	}
 	default:
 		response.code = RESPONSE_CODES.ERROR;
@@ -384,19 +524,25 @@ const server = http.createServer((req, res) => {
 });
 
 const endpoints = {
-	serviceKey:           "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
-	olympus:              "https://appstoreconnect.apple.com/olympus/v1/session",
-	login:                "https://idmsa.apple.com/appleauth/auth/signin",
-	code:                 "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
-	preferredCurrencies:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
-	userdetails:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
-	listApps:             "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
-	listIAPs:             "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                             //appId
-	listFamilies:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/families",                    //appId
-	iapTemplate:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/template",                  //appId, type
-	priceMatrixRecurring:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix/recurring",            //appId
-	priceMatrixConsumable: "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix?iapType=consumable",   //appId
-	create:               "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps"                              //appId
+	serviceKey:            "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
+	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
+	login:                 "https://idmsa.apple.com/appleauth/auth/signin",
+	code:                  "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+	preferredCurrencies:   "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
+	userdetails:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
+	listApps:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
+	listIAPs:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
+	listFamilies:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/families",                          //appId
+	iapDetails:            "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#",                                 //appId, productId
+	iapTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/template",                        //appId, type
+	famTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/template",                   //appId
+	priceMatrixRecurring:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix/recurring",          //appId
+	priceMatrixConsumable: "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix?iapType=consumable", //appId
+	create:                "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
+	createFamily:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/",                           //appId
+	rsPriceCreate:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/subscriptions",           //appId, productId
+	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
+	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies"
 	//ra/apps/#{app_id}/iaps/#{type}/template
 }
 
@@ -844,6 +990,48 @@ function sendCMatrixRequest(appId){
 	});
 }
 
+function sendCountriesRequest(){
+	return new Promise(resolve => {
+
+		const options = {
+			method: "GET",
+			headers: formHeader(0)
+		}
+		
+		const req = https.request(endpoints.countryCodes, options, (res) => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', (chunk) => {
+				data.push(chunk);
+			});
+		
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+				switch (res.statusCode){
+				case (401):
+					resolve("AUTH");
+					break;
+				case (200):
+					resolve(m);
+					break;
+					
+				default:
+					resolve(res.statusCode + ": " + m);
+				}
+			});
+		});
+
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.end();
+	});
+}
+
 function sendTemplateRequest(appId, iapType){
 	return new Promise(resolve => {
 
@@ -853,6 +1041,49 @@ function sendTemplateRequest(appId, iapType){
 		}
 		
 		let finalURL = applyParametersToEndpoint(endpoints.iapTemplate, [appId, iapType]);
+		const req = https.request(finalURL, options, (res) => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', (chunk) => {
+				data.push(chunk);
+			});
+		
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+				switch (res.statusCode){
+				case (401):
+					resolve("AUTH");
+					break;
+				case (200):
+					resolve(m);
+					break;
+					
+				default:
+					resolve(res.statusCode + ": " + m);
+				}
+			});
+		});
+
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.end();
+	});
+}
+
+function sendFamilyTemplateRequest(appId){
+	return new Promise(resolve => {
+
+		const options = {
+			method: "GET",
+			headers: formHeader(0)
+		}
+		
+		let finalURL = applyParametersToEndpoint(endpoints.famTemplate, [appId]);
 		const req = https.request(finalURL, options, (res) => {
 			console.log(`statusCode: ${res.statusCode}`);
 			addCookiesToStorage(res.headers["set-cookie"]);
@@ -913,8 +1144,215 @@ function sendIAPCreation(filledTemplate, appId){
 				case (201):
 					resolve("OK");
 					break;
-				case (403):
-					resolve("WRONG");
+				default:
+					resolve(m);
+					break;
+				}
+			});
+		});
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.write(data);
+		req.end();
+	});
+}
+
+function sendFamilyCreation(filledTemplate, appId){
+	return new Promise(resolve => {
+
+		const data = JSON.stringify(filledTemplate);
+		
+		const options = {
+			method: 'POST',
+			headers: formHeader(data.length)
+		}
+		
+		let finalURL = applyParametersToEndpoint(endpoints.createFamily, [appId]);
+		const req = https.request(finalURL, options, res => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', chunk => {
+				data.push(chunk);
+			});
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+			
+				switch (res.statusCode){
+				case (201):
+					resolve("OK");
+					break;
+				default:
+					resolve(m);
+					break;
+				}
+			});
+		});
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.write(data);
+		req.end();
+	});
+}
+
+function sendIAPDetailsRequest(appId, productId){
+	return new Promise(resolve => {
+
+		const options = {
+			method: "GET",
+			headers: formHeader(0)
+		}
+		
+		let finalURL = applyParametersToEndpoint(endpoints.iapDetails, [appId, productId]);
+		const req = https.request(finalURL, options, (res) => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', (chunk) => {
+				data.push(chunk);
+			});
+		
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+				switch (res.statusCode){
+				case (401):
+					resolve("AUTH");
+					break;
+				case (200):
+					resolve(m);
+					break;
+					
+				default:
+					resolve(res.statusCode + ": " + m);
+				}
+			});
+		});
+
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.end();
+	});
+}
+
+function sendIAPDetailsRefresh(updated, appId, productId){
+	return new Promise(resolve => {
+
+		const data = JSON.stringify(updated);
+		
+		const options = {
+			method: 'PUT',
+			headers: formHeader(data.length)
+		}
+		
+		let finalURL = applyParametersToEndpoint(endpoints.iapDetails, [appId, productId]);
+		const req = https.request(finalURL, options, res => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', chunk => {
+				data.push(chunk);
+			});
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+			
+				switch (res.statusCode){
+				case (200):
+					resolve("OK");
+					break;
+				default:
+					resolve(m);
+					break;
+				}
+			});
+		});
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.write(data);
+		req.end();
+	});
+}
+
+function sendRSPriceCreation(pricing, appId, productId){
+	return new Promise(resolve => {
+
+		const data = JSON.stringify(pricing);
+		
+		const options = {
+			method: 'POST',
+			headers: formHeader(data.length)
+		}
+		
+		let finalURL = applyParametersToEndpoint(endpoints.rsPriceCreate, [appId, productId]);
+		const req = https.request(finalURL, options, res => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', chunk => {
+				data.push(chunk);
+			});
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+			
+				switch (res.statusCode){
+				case (201):
+					resolve("OK");
+					break;
+				default:
+					resolve(m);
+					break;
+				}
+			});
+		});
+
+		req.on('error', error => {
+			console.error(error);
+		})
+
+		req.write(data);
+		req.end();
+	});
+}
+
+function sendTrialCreation(trial){
+	return new Promise(resolve => {
+
+		const data = JSON.stringify(trial);
+		
+		const options = {
+			method: 'POST',
+			headers: formHeader(data.length)
+		}
+		
+		const req = https.request(endpoints.trialCreate, options, res => {
+			console.log(`statusCode: ${res.statusCode}`);
+			addCookiesToStorage(res.headers["set-cookie"]);
+
+			let data = [];
+			res.on('data', chunk => {
+				data.push(chunk);
+			});
+			res.on('end', () => {
+				let m = Buffer.concat(data).toString();
+			
+				switch (res.statusCode){
+				case (201):
+					resolve("OK");
 					break;
 				default:
 					resolve(m);

@@ -326,6 +326,10 @@ function createCreationForm(appBundle, formId){
 			name: "off"
 		},
 		{
+			id: "3d",
+			name: "3d"
+		},
+		{
 			id: "1w",
 			name: "1w"
 		},
@@ -523,7 +527,7 @@ function sendStart(){
 			status(r);
 		}
 	});
-	
+
 	return false;
 }
 
