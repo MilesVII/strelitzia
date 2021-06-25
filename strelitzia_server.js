@@ -1,9 +1,61 @@
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
+const http = require('http');   //For server
+const https = require('https'); //For apol
+const fs = require('fs');       //For fuck's sake (storage)
 
 const hostname = "127.0.0.1";
 const port = 7071;
+
+let storage = {};
+function loadStorage(){
+	try {
+		let f = fs.readFileSync('storage.json');
+		if (f) storage = JSON.parse(f);
+	} catch (e){
+		console.log("No saved storages found, will load new");
+	}
+}
+function saveStorage(){
+	let s = JSON.stringify(storage)
+	fs.writeFileSync("storage.json", s);
+}
+loadStorage();
+
+const server = http.createServer((req, res) => {
+	// Set CORS headers
+	res.setHeader("Access-Control-Allow-Origin", "*");
+	res.setHeader("Access-Control-Request-Method", "*");
+	res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST");
+	res.setHeader("Access-Control-Allow-Headers", "*");
+	if (req.method === "OPTIONS") {
+		res.writeHead(200);
+		res.end();
+		return;
+	}
+
+	res.statusCode = 200;
+	res.setHeader('Content-Type', 'text/plain');
+
+	let data = [];
+	req.on('data', chunk => {
+		data.push(chunk);
+	});
+	req.on('end', async () => {
+		let m = Buffer.concat(data).toString();
+		let r = await respondToCommand(JSON.parse(m));
+		res.end(JSON.stringify(r));
+	});
+});
+
+server.listen(port, hostname, () => {
+	console.log(`Server running at http://${hostname}:${port}/`);
+
+	if (!storage["serviceKey"])
+		sendServiceKeyRequest().then((key) => setServiceKey(key));
+
+	let url = './client/strelitzia.html';
+	let start = (process.platform == 'darwin'? 'open': process.platform == 'win32'? 'start': 'xdg-open');
+	require('child_process').exec(start + ' ' + url);
+});
 
 const RESPONSE_CODES = {
 	ERROR: 0,
@@ -34,68 +86,31 @@ const IAP_TYPE_NAMES = {
 	"nc" : IAP_TYPE_NC
 }
 
-let storage = {};
-function loadStorage(){
-	try {
-		let f = fs.readFileSync('storage.json');
-		if (f) storage = JSON.parse(f);
-	} catch (e){
-		console.log("No saved storages found, will load new");
-	}
-}
-function saveStorage(){
-	let s = JSON.stringify(storage)
-	fs.writeFileSync("storage.json", s);
-}
-loadStorage();
-
-function getCookieKey(c){
-	return c.split("=")[0];
-}
-function addCookiesToStorage(cookies){
-	if (!storage.cookies)
-		storage.cookies = [];
-	for (let c in cookies){
-		let overwrite = false;
-		for (let ec in storage.cookies){
-			let oldKey = getCookieKey(storage.cookies[ec]);
-			let newKey = getCookieKey(cookies[c]);
-			if (oldKey == newKey){
-				overwrite = true;
-				storage.cookies[ec] = cookies[c];
-				break;
-			}
-		}
-		if (!overwrite)
-			storage.cookies.push(cookies[c]);
-	}
-	saveStorage();
-}
-function formCookieHeader(){
-	if (storage.cookies){
-		let f = storage.cookies.join("; ");
-		return f;
-	} else
-		return null;
+const endpoints = {
+	serviceKey:            "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
+	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
+	login:                 "https://idmsa.apple.com/appleauth/auth/signin",
+	code:                  "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+	preferredCurrencies:   "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
+	userdetails:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
+	listApps:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
+	listIAPs:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
+	listFamilies:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/families",                          //appId
+	iapDetails:            "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#",                                 //appId, productId
+	iapTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/template",                        //appId, type
+	famTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/template",                   //appId
+	priceMatrixRecurring:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix/recurring",          //appId
+	priceMatrixConsumable: "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix?iapType=consumable", //appId
+	create:                "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
+	createFamily:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/",                           //appId
+	rsPriceCreate:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/subscriptions",           //appId, productId
+	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
+	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies"
 }
 
-function formHeader(dataLength){
-	let headers = {
-		"Content-Type": 'application/json',
-		"Content-Type": 'application/json',
-		"Content-Length": dataLength,
-		"X-Requested-With": 'XMLHttpRequest',
-		"Accept": "application/json, text/javascript"
-	}
-	if (storage["sessionId"]) headers["X-Apple-Id-Session-Id"] = storage["sessionId"];
-	if (storage["serviceKey"])   headers["X-Apple-Widget-Key"] = storage["serviceKey"];
-	if (storage["scnt"])                       headers["scnt"] = storage["scnt"];
-	
-	let storedCookies = formCookieHeader();
-	if (storedCookies)                       headers["Cookie"] = storedCookies;
-
-	return headers;
-}
+const METHOD_GET = "GET";
+const METHOD_POST = "POST";
+const METHOD_PUT = "PUT";
 
 async function respondToCommand(command){
 	let response = {
@@ -104,6 +119,39 @@ async function respondToCommand(command){
 	}
 
 	switch (command.command){
+	case ("SERVICE"):{
+		switch (command.options.message){
+		case ("PRICES"):{
+			if (storage.rsMatrix){
+				return {
+					rs: storage.rsMatrix,
+					c: storage.rsMatrix
+				};
+			} else {
+				return {
+					error: "Authorize and select any app to download pricing matrixes"
+				};
+			}
+			break;
+		}
+		case ("SIGNOUT"):{
+			delete storage.cookies;
+			delete storage.team;
+			saveStorage();
+			return("OK");
+			break;
+		}
+		case ("RESET"):{
+			storage = {};
+			saveStorage();
+			let key = await sendServiceKeyRequest();
+			setServiceKey(key);
+			return("OK");
+			break;
+		}
+		}
+		break;
+	}
 	case ("START"):{
 		let olympusResponse = await sendToOlympus();
 		if (olympusResponse == "AUTH"){
@@ -264,7 +312,6 @@ async function respondToCommand(command){
 			storage.countryCodes = codesArray;
 			saveStorage();
 		}
-
 		
 		response.code = RESPONSE_CODES.OK;
 		response.rsMatrix = storage.rsMatrix;
@@ -358,7 +405,7 @@ async function respondToCommand(command){
 					if (i.vendorId == productId)
 						return i;
 
-				console.log("apple is shid")
+				//console.log("apple is shid")
 				tries -= 1;
 			}
 			return null;
@@ -369,18 +416,20 @@ async function respondToCommand(command){
 			id: null
 		}
 
-		let famResponse = await sendFamiliesRequest(command.options.appId);
-		if (famResponse == "AUTH"){
+		let familiesResponse = await sendFamiliesRequest(command.options.appId);
+		if (familiesResponse == "AUTH"){
 			response.code = RESPONSE_CODES.AUTH;
 			return response;
 		} else {
-			let parsed = JSON.parse(famResponse).data;
+			let parsed = JSON.parse(familiesResponse).data;
 			if (parsed.length >= 1){
 				currentFamily.name = parsed[0].name.value;
 				currentFamily.id = parsed[0].id;
 			}
 		}
 
+		console.log("Run initiated, orders in queue: " + command.options.orders.length);
+		let finishedCount = 0;
 		for (let order of command.options.orders){
 			let baseResponse;
 			
@@ -404,10 +453,18 @@ async function respondToCommand(command){
 				//template.activeAddOns[0].pricingDurationType = {value: order.duration}; //doesn't work
 				template.name = {value: DEFAULT_FAMILY_NAME};
 				template.details.value = [];
-				let famResponse = await sendFamilyCreation(template, command.options.appId);
+				let famCreateResponse = await sendFamilyCreation(template, command.options.appId);
 
-				if (famResponse == "OK"){
+				if (famCreateResponse == "OK"){
 					let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
+
+					//Register freshly created family
+					familiesResponse = await sendFamiliesRequest(command.options.appId);
+					let parsed = JSON.parse(familiesResponse).data;
+					if (parsed.length >= 1){
+						currentFamily.name = parsed[0].name.value;
+						currentFamily.id = parsed[0].id;
+					}
 
 					if (!found){
 						response.code = RESPONSE_CODES.ERROR;
@@ -421,7 +478,7 @@ async function respondToCommand(command){
 					freshProduct.pricingDurationType = {value: order.duration};
 					
 					baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
-					if (baseResponse == "OK") console.log("перемога"); else console.log("зрада");
+					if (baseResponse != "OK") console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
 				} else {
 					console.log("Failed to create family, aborting");
 					break;
@@ -478,15 +535,17 @@ async function respondToCommand(command){
 				let productId = found.adamId;
 				let pricing = buildSubscriptionPricing(determineTier(order.type, order.price));
 				let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
-				if (pricingResponse == "OK") console.log("Created trial");
 
 				if (order.trial != "off" && pricingResponse == "OK"){
 					let trial = buildTrialRequest(order.trial, command.options.appId, productId);
 					let trialResponse = await sendTrialCreation(trial);
-					if (trialResponse == "OK") console.log("Created trial");
+					if (trialResponse != "OK") console.log("Failed to create trial");
 				}
 			}
+			finishedCount += 1;
+			console.log("Done " + finishedCount + "/" + command.options.orders.length);
 		}
+		console.log("Finished");
 		response.code = RESPONSE_CODES.OK;
 		return (response);
 	}
@@ -497,53 +556,52 @@ async function respondToCommand(command){
 	}
 }
 
-const server = http.createServer((req, res) => {
-	// Set CORS headers
-	res.setHeader("Access-Control-Allow-Origin", "*");
-	res.setHeader("Access-Control-Request-Method", "*");
-	res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST");
-	res.setHeader("Access-Control-Allow-Headers", "*");
-	if (req.method === "OPTIONS") {
-		res.writeHead(200);
-		res.end();
-		return;
+function getCookieKey(c){
+	return c.split("=")[0];
+}
+function addCookiesToStorage(cookies){
+	if (!storage.cookies)
+		storage.cookies = [];
+	for (let c in cookies){
+		let overwrite = false;
+		for (let ec in storage.cookies){
+			let oldKey = getCookieKey(storage.cookies[ec]);
+			let newKey = getCookieKey(cookies[c]);
+			if (oldKey == newKey){
+				overwrite = true;
+				storage.cookies[ec] = cookies[c];
+				break;
+			}
+		}
+		if (!overwrite)
+			storage.cookies.push(cookies[c]);
 	}
+	saveStorage();
+}
+function formCookieHeader(){
+	if (storage.cookies){
+		let f = storage.cookies.join("; ");
+		return f;
+	} else
+		return null;
+}
 
-	res.statusCode = 200;
-	res.setHeader('Content-Type', 'text/plain');
+function formHeader(dataLength){
+	let headers = {
+		"Content-Type": 'application/json',
+		"Content-Type": 'application/json',
+		"Content-Length": dataLength,
+		"X-Requested-With": 'XMLHttpRequest',
+		"Accept": "application/json, text/javascript"
+	}
+	if (storage["sessionId"]) headers["X-Apple-Id-Session-Id"] = storage["sessionId"];
+	if (storage["serviceKey"])   headers["X-Apple-Widget-Key"] = storage["serviceKey"];
+	if (storage["scnt"])                       headers["scnt"] = storage["scnt"];
+	
+	let storedCookies = formCookieHeader();
+	if (storedCookies)                       headers["Cookie"] = storedCookies;
 
-	let data = [];
-	req.on('data', chunk => {
-		data.push(chunk);
-	});
-	req.on('end', async () => {
-		let m = Buffer.concat(data).toString();
-		let r = await respondToCommand(JSON.parse(m));
-		res.end(JSON.stringify(r));
-	});
-});
-
-const endpoints = {
-	serviceKey:            "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
-	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
-	login:                 "https://idmsa.apple.com/appleauth/auth/signin",
-	code:                  "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
-	preferredCurrencies:   "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
-	userdetails:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
-	listApps:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
-	listIAPs:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
-	listFamilies:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/families",                          //appId
-	iapDetails:            "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#",                                 //appId, productId
-	iapTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/template",                        //appId, type
-	famTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/template",                   //appId
-	priceMatrixRecurring:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix/recurring",          //appId
-	priceMatrixConsumable: "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix?iapType=consumable", //appId
-	create:                "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
-	createFamily:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/",                           //appId
-	rsPriceCreate:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/subscriptions",           //appId, productId
-	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
-	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies"
-	//ra/apps/#{app_id}/iaps/#{type}/template
+	return headers;
 }
 
 function applyParametersToEndpoint(endpoint, parameters){
@@ -560,36 +618,15 @@ function setServiceKey(rawdata){
 	let j = JSON.parse(rawdata);
 	storage["serviceKey"] = j.authServiceKey;
 	saveStorage();
-	console.log("Obtained service key");
 }
 
-server.listen(port, hostname, () => {
-	console.log(`Server running at http://${hostname}:${port}/`);
-
-	if (!storage["serviceKey"])
-		sendGet(endpoints.serviceKey).then((key) => setServiceKey(key));
-});
-
 //Returns response body in callback
-function sendGet(url){
-	return new Promise(resolve => {
-		https.get(url, (res) => {
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				resolve(m);
-			});
-		}).on("error", (err) => {
-			resolve(err.message);
-		});
-	});
+function sendServiceKeyRequest(){
+	return genericRequest(METHOD_GET, null, endpoints.serviceKey, null);
 }
 
 function sendToOlympus(){
+
 	return new Promise(resolve => {
 		
 		const options = {
@@ -598,7 +635,6 @@ function sendToOlympus(){
 		}
 		
 		const req = https.request(endpoints.olympus, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
 			addCookiesToStorage(res.headers["set-cookie"]);
 			storage["scnt"] = res.headers["scnt"];
 			storage["sessionId"] = res.headers["x-apple-id-session-id"];
@@ -649,7 +685,6 @@ function sendLogin(login, password){
 		}
 
 		const req = https.request(endpoints.login, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
 			addCookiesToStorage(res.headers["set-cookie"]);
 			storage["scnt"] = res.headers["scnt"];
 			storage["sessionId"] = res.headers["x-apple-id-session-id"];
@@ -663,7 +698,7 @@ function sendLogin(login, password){
 				let m = Buffer.concat(data).toString();
 				switch (res.statusCode){
 				case (412):
-					resolve("Need to acknowledge to Apple's Apple ID and Privacy storagement");
+					resolve("Need to acknowledge to Apple's bullshit agreements");
 					break;
 				case (401):
 					resolve("Authorization failed");
@@ -687,492 +722,87 @@ function sendLogin(login, password){
 }
 
 function sendCode(code){
-	return new Promise(resolve => {
-
-		const data = JSON.stringify({ 
-			securityCode: { 
-				code: code 
-			} 
-		});
-		
-		const options = {
-			method: 'POST',
-			headers: formHeader(data.length)
-		}
-		
-		const req = https.request(endpoints.code, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-			
-				switch (res.statusCode){
-				case (204):
-					resolve("OK");
-					break;
-				case (401):
-					resolve("AUTH");
-					break;
-				default:
-					resolve(m);
-					break;
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.write(data);
-		req.end();
+	const data = JSON.stringify({ 
+		securityCode: { 
+			code: code 
+		} 
 	});
+	return genericRequest(METHOD_POST, data, endpoints.code, null);
 }
 
 function sendUserDetails(){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		const req = https.request(endpoints.userdetails, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.userdetails, null);
 }
 
 function sendAppsRequest(){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		const req = https.request(endpoints.listApps, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.listApps, null);
 }
 
 function sendIAPsRequest(appId){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.listIAPs, [appId]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.listIAPs, [appId]);
 }
 
 function sendFamiliesRequest(appId){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.listFamilies, [appId]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.listFamilies, [appId]);
 }
 
 function sendRSMatrixRequest(appId){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.priceMatrixRecurring, [appId]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.priceMatrixRecurring, [appId]);
 }
 
 function sendCMatrixRequest(appId){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.priceMatrixConsumable, [appId]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.priceMatrixConsumable, [appId]);
 }
 
 function sendCountriesRequest(){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		const req = https.request(endpoints.countryCodes, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.countryCodes, null);
 }
 
 function sendTemplateRequest(appId, iapType){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.iapTemplate, [appId, iapType]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.iapTemplate, [appId, iapType]);
 }
 
 function sendFamilyTemplateRequest(appId){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.famTemplate, [appId]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-				switch (res.statusCode){
-				case (401):
-					resolve("AUTH");
-					break;
-				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
+	return genericRequest(METHOD_GET, null, endpoints.famTemplate, [appId]);
 }
 
 function sendIAPCreation(filledTemplate, appId){
-	return new Promise(resolve => {
-
-		const data = JSON.stringify(filledTemplate);
-		
-		const options = {
-			method: 'POST',
-			headers: formHeader(data.length)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.create, [appId]);
-		const req = https.request(finalURL, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-			
-				switch (res.statusCode){
-				case (201):
-					resolve("OK");
-					break;
-				default:
-					resolve(m);
-					break;
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.write(data);
-		req.end();
-	});
+	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), endpoints.create, [appId]);
 }
 
 function sendFamilyCreation(filledTemplate, appId){
-	return new Promise(resolve => {
+	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), endpoints.createFamily, [appId]);
+}
 
-		const data = JSON.stringify(filledTemplate);
-		
+function sendIAPDetailsRequest(appId, productId){
+	return genericRequest(METHOD_GET, null, endpoints.iapDetails, [appId, productId]);
+}
+
+function sendIAPDetailsRefresh(updated, appId, productId){
+	return genericRequest(METHOD_PUT, JSON.stringify(updated), endpoints.iapDetails, [appId, productId]);
+}
+
+function sendRSPriceCreation(pricing, appId, productId){
+	return genericRequest(METHOD_POST, JSON.stringify(pricing), endpoints.rsPriceCreate, [appId, productId]);
+}
+
+function sendTrialCreation(trial){
+	return genericRequest(METHOD_POST, JSON.stringify(trial), endpoints.trialCreate, null);
+}
+
+function genericRequest(method, data, endpoint, endpointParameters){
+	return new Promise(resolve => {
 		const options = {
-			method: 'POST',
-			headers: formHeader(data.length)
+			method: method,
+			headers: formHeader((method == "GET") ? 0 : data.length)
 		}
 		
-		let finalURL = applyParametersToEndpoint(endpoints.createFamily, [appId]);
-		const req = https.request(finalURL, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
+		let requestTarget;
+		if (endpointParameters)
+			requestTarget = applyParametersToEndpoint(endpoint, endpointParameters);
+		else
+			requestTarget = endpoint;
+		const req = https.request(requestTarget, options, res => {
 			addCookiesToStorage(res.headers["set-cookie"]);
 
 			let data = [];
@@ -1182,138 +812,23 @@ function sendFamilyCreation(filledTemplate, appId){
 			res.on('end', () => {
 				let m = Buffer.concat(data).toString();
 			
-				switch (res.statusCode){
-				case (201):
-					resolve("OK");
-					break;
-				default:
-					resolve(m);
-					break;
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.write(data);
-		req.end();
-	});
-}
-
-function sendIAPDetailsRequest(appId, productId){
-	return new Promise(resolve => {
-
-		const options = {
-			method: "GET",
-			headers: formHeader(0)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.iapDetails, [appId, productId]);
-		const req = https.request(finalURL, options, (res) => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', (chunk) => {
-				data.push(chunk);
-			});
-		
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
 				switch (res.statusCode){
 				case (401):
 					resolve("AUTH");
 					break;
+				case (422):
+					resolve("MALFORMED REQUEST");
+					break;
 				case (200):
-					resolve(m);
-					break;
-					
-				default:
-					resolve(res.statusCode + ": " + m);
-				}
-			});
-		});
-
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.end();
-	});
-}
-
-function sendIAPDetailsRefresh(updated, appId, productId){
-	return new Promise(resolve => {
-
-		const data = JSON.stringify(updated);
-		
-		const options = {
-			method: 'PUT',
-			headers: formHeader(data.length)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.iapDetails, [appId, productId]);
-		const req = https.request(finalURL, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-			
-				switch (res.statusCode){
-				case (200):
-					resolve("OK");
-					break;
-				default:
-					resolve(m);
-					break;
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.write(data);
-		req.end();
-	});
-}
-
-function sendRSPriceCreation(pricing, appId, productId){
-	return new Promise(resolve => {
-
-		const data = JSON.stringify(pricing);
-		
-		const options = {
-			method: 'POST',
-			headers: formHeader(data.length)
-		}
-		
-		let finalURL = applyParametersToEndpoint(endpoints.rsPriceCreate, [appId, productId]);
-		const req = https.request(finalURL, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-			
-				switch (res.statusCode){
 				case (201):
-					resolve("OK");
+				case (204):
+					if (method == "GET")
+						resolve(m);
+					else
+						resolve("OK");
 					break;
 				default:
+					console.log(`Unknown status: ${res.statusCode} at ${endpoint}`);
 					resolve(m);
 					break;
 				}
@@ -1324,48 +839,7 @@ function sendRSPriceCreation(pricing, appId, productId){
 			console.error(error);
 		})
 
-		req.write(data);
-		req.end();
-	});
-}
-
-function sendTrialCreation(trial){
-	return new Promise(resolve => {
-
-		const data = JSON.stringify(trial);
-		
-		const options = {
-			method: 'POST',
-			headers: formHeader(data.length)
-		}
-		
-		const req = https.request(endpoints.trialCreate, options, res => {
-			console.log(`statusCode: ${res.statusCode}`);
-			addCookiesToStorage(res.headers["set-cookie"]);
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', () => {
-				let m = Buffer.concat(data).toString();
-			
-				switch (res.statusCode){
-				case (201):
-					resolve("OK");
-					break;
-				default:
-					resolve(m);
-					break;
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		req.write(data);
+		if (data) req.write(data);
 		req.end();
 	});
 }

@@ -43,6 +43,12 @@ const COMMANDS = {
 			defaultFamilyName: "Subscriptions",
 			orders: []
 		}
+	},
+	service: {
+		command: "SERVICE",
+		options: {
+			message: ""
+		}
 	}
 };
 const RESPONSE_CODES = {
@@ -105,37 +111,37 @@ function onRadioChange(group, selected){
 	}
 }
 
-function initRadios(){
-	let radiohosts = document.getElementsByClassName("xradio_host");
+function initRadio(host){
+	let first = null;
 	
-	for (let host of radiohosts){
-		let first = null;
-		
-		if (radios[host.id]) continue;
+	//if (radios[host.id]) return;
 
-		radios[host.id] = [];
-		for (let option of host.children){
-			if (option.className == "xradio"){
-				if (!first){
-					first = option;
-				}
-				option.onclick = ()=>{
-					onRadioChange(host.id, option.id);
-				};
-				radios[host.id].push(option);
+	radios[host.id] = [];
+	for (let option of host.children){
+		if (option.className == "xradio"){
+			if (!first){
+				first = option;
 			}
-		}
-		if (first){
-			onRadioChange(host.id, first.id);
+			option.onclick = ()=>{
+				onRadioChange(host.id, option.id);
+			};
+			radios[host.id].push(option);
 		}
 	}
-	
+	if (first){
+		onRadioChange(host.id, first.id);
+	}
 }
 
 
 function start(){
+	let subs = [
+		"Because launching Spaceship is called rocket science",
+		"[eq",
+		"Ракеты нет, скачем на батуте"
+	]
+	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
 	sendStart();
-	initRadios();
 }
 
 function startLogin(){
@@ -157,6 +163,7 @@ function startTeamSelect(teams){
 	status("Select team:");
 	hideAllDialogs();
 	let teamSelector = document.getElementById("dialog_team");
+	teamSelector.innerHTML = "";
 	for (let t of teams){
 		let option = document.createElement("div");
 		option.className = "xbutton";
@@ -171,6 +178,7 @@ function startAppSelect(apps){
 	status("Select app:");
 	hideAllDialogs();
 	let appSelector = document.getElementById("dialog_apps");
+	appSelector.innerHTML = "";
 	for (let a of apps){
 		let option = document.createElement("div");
 		option.className = "xbutton";
@@ -181,21 +189,7 @@ function startAppSelect(apps){
 	appSelector.style.display = "inline-block";
 }
 
-function startIAPSelect(iaps){
-	status("Select IAP:");
-	hideAllDialogs();
-	let appSelector = document.getElementById("dialog_iaps");
-	for (let i of iaps){
-		let option = document.createElement("div");
-		option.className = "xbutton";
-		option.textContent = i.refname;
-		//option.onclick = () => {selectApp(i.refname);};
-		appSelector.appendChild(option);
-	}
-	appSelector.style.display = "inline-block";
-}
-
-function createCreationForm(appBundle, formId){
+function createCreationForm(parent, appBundle, formId){
 
 	function createRadio(id, options){
 		let host = document.createElement("div");
@@ -416,14 +410,41 @@ function createCreationForm(appBundle, formId){
 	descInput.placeholder = "Description";
 	versionGroup.appendChild(descInput);
 
+
 	item.appendChild(versionGroup);
 
-	return item;
+	parent.appendChild(item);
+
+	initRadio(typeRadio);
+	initRadio(durRadio);
+	initRadio(trialRadio);
 }
 
 function radioSelected(id){
 	return document.getElementById(id).querySelector(".xradio_selected").id;
 }
+
+/*
+data = {
+	all strings
+
+	type:    rs | nc | c
+	refname: 1 month gold
+	bundle:  com.pom.bum
+
+	//rs-specific
+	data.duration = 1y
+	data.trial    = 3d
+	data.price    = 0.99
+	
+	//c-specific
+	data.price    = 0.99
+	version: {
+		name: IAP Name
+		desc: IAP Description
+	}
+}
+*/
 
 function collectData(appBundle, formId){
 	let form = document.getElementById("dialog_create_" + formId);
@@ -447,10 +468,58 @@ function collectData(appBundle, formId){
 	return data;
 }
 
+function setData(data, formId){
+	let form = document.getElementById("dialog_create_" + formId);
+
+	onRadioChange("dialog_create_iap_type_" + formId, data.type);
+	form.querySelector("#dialog_create_iap_refname").value = data.refname;
+	form.querySelector("#dialog_create_iap_bundle").value = data.bundle
+
+	form.querySelector("#dialog_create_iap_name").value = data.version.name;
+	form.querySelector("#dialog_create_iap_desc").value = data.version.desc;
+
+	if (data.type == "rs"){
+		onRadioChange("dialog_create_iap_duration_" + formId, data.duration);
+		onRadioChange("dialog_create_iap_trial_" + formId, data.trial);
+		form.querySelector("#dialog_create_iap_rsPrice").value = data.price;
+	} else {
+		form.querySelector("#dialog_create_iap_cPrice").value = data.price;
+	}
+}
+
+function isValid(data){
+	if (!["rs", "nc", "c"].includes(data.type))
+		return false;
+	
+	if (data.refname.length < 2)
+		return false;
+	
+	if (data.bundle.length < 2)
+		return false;
+
+	if (data.version.name.length < 2)
+		return false;
+
+	if (data.version.desc.length < 2)
+		return false;
+
+	if (data.type == "rs"){
+		if (!["1w", "1m", "2m", "3m", "6m", "1y"].includes(data.duration))
+			return false;
+
+		if (!["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(data.trial))
+			return false;
+	}
+
+	return true;
+}
+
+let creationDialogItemCount = 0;
 function startCreationDialog(cMatrix, rsMatrix, appBundle, appId){
 	status(appBundle);
 	hideAllDialogs();
 	let dialog = document.getElementById("dialog_create");
+	dialog.innerHTML = "";
 
 	if (!document.getElementById("cdatalist")){
 		let cDatalist = document.createElement("datalist");
@@ -472,20 +541,107 @@ function startCreationDialog(cMatrix, rsMatrix, appBundle, appId){
 		}
 		dialog.appendChild(rsDatalist);
 	}
-
-	let item = createCreationForm(appBundle, "x");
-	let boom = document.createElement("div");
-	boom.className = "xbutton";
-	boom.textContent = "do porn";
-	boom.onclick = () => {
-		order = collectData(appBundle, "x");
-		createIAP([order], appId);
+	
+	let back = document.createElement("div");
+	back.className = "xbutton";
+	back.textContent = "Back to app list";
+	back.onclick = () => {
+		listApps();
 	}
-	item.appendChild(boom);
+	dialog.appendChild(back);
 
-	dialog.appendChild(item);
+	let start = document.createElement("div");
+	start.className = "xbutton";
+	start.textContent = "Start IAP creation";
+	start.onclick = () => {
+		start.onclick = null;
+		back.remove();
+		start.remove();
+		let order = [];
+		for (let i = 0; i < creationDialogItemCount; ++i){
+			order.push(collectData(appBundle, i));
+		}
+		createIAP(order, appId);
+	}
+	dialog.appendChild(start);
+
+	let picker = document.createElement("input");
+	picker.type = "file";
+	picker.id = "filePicker";
+	picker.setAttribute("for", "filePicker");
+	dialog.appendChild(picker);
+
+	let pickerButton = document.createElement("label");
+	pickerButton.className = "xbutton";
+	pickerButton.textContent = "Load from file";
+	pickerButton.setAttribute("for", "filePicker");
+	dialog.appendChild(pickerButton);
+	
+	let addItem = document.createElement("div");
+	addItem.className = "xbutton";
+	addItem.textContent = "Add order";
+	addItem.onclick = () => {
+		createCreationForm(dialog, appBundle, "" + creationDialogItemCount);
+		creationDialogItemCount += 1;
+	}
+	dialog.appendChild(addItem);
+	
+	let remItem = document.createElement("div");
+	remItem.className = "xbutton";
+	remItem.textContent = "Remove last order";
+	remItem.onclick = () => {
+		if (creationDialogItemCount > 0){
+			document.getElementById("dialog_create_" + (creationDialogItemCount - 1)).remove();
+			creationDialogItemCount -= 1;
+		}
+	}
+	dialog.appendChild(remItem);
+
+	function processCSV(rawData){
+		let ignoreRows = [];
+		for (let e of rawData.errors){
+			ignoreRows.push("" + e.row);
+		}
+		for (let i in rawData.data){
+			if (ignoreRows.includes(i)) continue;
+
+			let row = rawData.data[i];
+			let data = {
+				type:    row["Type"].toLowerCase(),
+				refname: row["Reference Name"],
+				bundle:  row["Bundle Suffix"],
+				price:   row["Price (USD)"],
+
+				version: {
+					name: row["Name (en-US)"],
+					desc: row["Desc (en-US)"]
+				}
+			};
+			if (data.type == "rs"){
+				data.duration = row["Duration"];
+				data.trial    = row["Trial"] == "" ? "off" : row["Trial"];
+			}
+
+			if (isValid(data)){
+				addItem.onclick();
+				setData(data, creationDialogItemCount - 1);
+			} else {
+				console.log("Invalid entry at row " + i);
+				console.log(data);
+			}
+		}
+	}
+
+	picker.addEventListener('change', function(){
+		Papa.parse(picker.files[0], {
+			header: true,
+			complete: function(results) {
+				processCSV(results);
+			}
+		});
+	});
+
 	dialog.style.display = "block";
-	initRadios();
 }
 
 function loginComplete(){
@@ -505,6 +661,69 @@ function processCommonResponses(response){
 	default:
 		return false;
 	}
+}
+
+function showModal(message){
+	let back = document.createElement("div");
+	back.className = "modal";
+
+	let box = document.createElement("div");
+	box.className = "modal-content";
+
+	let text = document.createElement("div");
+	text.textContent = message;
+
+	let close = document.createElement("div");
+	close.className = "xbutton";
+	close.textContent = "close";
+	let closer = ()=>{
+		back.remove();
+	};
+	back.onclick = closer;
+	close.onclick = closer;
+
+	box.appendChild(text);
+	box.appendChild(close);
+	back.appendChild(box);
+
+	document.documentElement.appendChild(back);
+}
+
+function servicePrices(){
+	let c = COMMANDS.service;
+	c.options.message = "PRICES";
+	sendCommand(c, (r)=>{
+		if (r.error)
+			showModal(r.error);
+		else {
+			let result = "Subscription prices: \n";
+			for (let item of r.rs){
+				result += item.price + "$\n";
+			}
+			result += "\n Consumable and Non-Consumable prices: \n"
+			for (let item of r.c){
+				result += item.price + "$\n";
+			}
+			showModal(result);
+		}
+	});
+}
+
+function serviceSignout(){
+	let c = COMMANDS.service;
+	c.options.message = "SIGNOUT";
+	sendCommand(c, (r)=>{
+		start();
+	});
+}
+
+function serviceReset(){
+	let c = COMMANDS.service;
+	c.options.message = "RESET";
+	sendCommand(c, (r)=>{
+		showModal("Settings cleared");
+		start();
+	});
 }
 
 function sendStart(){
@@ -602,6 +821,7 @@ function selectTeam(id){
 
 function listApps(){
 	status("");
+	hideAllDialogs();
 	let message = COMMANDS.apps;
 
 	sendCommand(message, (r)=>{
@@ -638,7 +858,7 @@ function selectApp(bundle, id){
 }
 
 function createIAP(orders, appId){
-	status("");
+	status("IAP creation process is initiated. You can observe progress using console.");
 	
 	let message = COMMANDS.create;
 	message.options.appId = appId;
@@ -648,6 +868,9 @@ function createIAP(orders, appId){
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
 				status("OK");
+				break;
+			case(RESPONSE_CODES.ERROR):
+				status(r.message);
 				break;
 			default:
 				status(r);

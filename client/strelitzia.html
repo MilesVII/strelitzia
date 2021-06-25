@@ -6,6 +6,7 @@
 		<link rel="icon" type="image/png" href="./icon.png">
 		<link rel="stylesheet" type="text/css" href="styles.css">
 		<script type="text/javascript" src="./strelitzia.js"></script>
+		<script type="text/javascript" src="./papaparse.min.js"></script>
 		</script>
 	</head>
 	<body onload="start()">
@@ -13,14 +14,21 @@
 			<table style="width:100%">
 				<tr>
 					<th style="width: 12%;">
-						<img src="icon.png" id="headerLogo"/>
+						<img src="./icon.png" id="headerLogo"/>
 					</th>
 					<th style="width: 64%; text-align: start;">
-						<div id="headerText">Strelitzia 0.6</div>
-						<div id="headerSub">Because launching Spaceship is called rocket science</div>
+						<div id="headerText">Strelitzia 0.8</div>
+						<div id="headerSub"></div>
 					</th>
-					<th>
-						<!--Settings for logout, unteam and other reset options-->
+					<th style="width: 12%;">
+						<div class="dropdown">
+							<img class="dropbtn" src="./settings.png"></img>
+							<div class="dropdown-content">
+								<a href="#" onclick="servicePrices()">View Prices</a>
+								<a href="#" onclick="serviceSignout()">Sign out</a>
+								<a href="#" onclick="serviceReset()">Reset</a>
+							</div>
+						</div>
 					</th>
 				</tr>
 			</table> 
@@ -34,26 +42,28 @@
 		</div>
 
 		<div id="content">
+			
+			
 			<div id="status"></div>
 			<div class="dialog" id="dialog_login">
 				<form onsubmit="return sendLogin();">
 					<input type="text" id="dialog_login_login" class="longinput" name="Login" placeholder="Login" required>
 					<input type="password" id="dialog_login_password" class="longinput" name="Password" placeholder="Password" required>
-					<input type="submit" value="Sign in"></input>
+					<input type="submit" value="Sign in" style="display:none"></input>
 				</form>
+				<div class="xbutton" onclick="sendLogin()">Sign in</div>
 			</div>
 			<div class="dialog" id="dialog_code">
 				<form onsubmit="return sendCode();">
 					<input type="text" id="dialog_code_code" class="longinput" name="Code" minlength=6 maxlength=6 pattern="[0-9]*" placeholder="6-digit code" required><br>
-					<input type="submit" value="Send code"></input>
+					<!--<input type="submit" value="Send code"></input>-->
 				</form> 
+				<div class="xbutton" onclick="sendCode()">Send code</div>
 				<div class="xbutton" id="backToLogin" onclick="relogin()">Send another code</div>
 			</div>
 			<div class="dialog" id="dialog_team"></div>
 			<div class="dialog" id="dialog_apps"></div>
-			<div class="dialog" id="dialog_iaps"></div>
 			<div class="dialog" id="dialog_create"></div>
-			</div>
 		</div>
 	</body>
 </html>
