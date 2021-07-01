@@ -41,7 +41,7 @@ const COMMANDS = {
 		command: "CREATE_IAP",
 		options: {
 			appId: "0",
-			defaultFamilyName: "Subscriptions",
+			//defaultFamilyName: "Subscriptions",
 			orders: []
 		}
 	},

@@ -1,13 +1,13 @@
-const http = require('http');   //For server
-const https = require('https'); //For apol
 const fs = require('fs');       //For fuck's sake (storage)
 const zlib = require("zlib");   //For reading apol POST responses (really)
 const {app, BrowserWindow, ipcMain} = require('electron');
 const { assert } = require('console');
 
+const chlorophytum = require("./chlorophytum.js");
+const argentea = require("./argentea.js");
+
 const DEBUG_MODE = false;
 const DEBUG_FAMILY_BYPASS = false;
-const BAD_APOL = "🏳️‍🌈🏳️‍🌈🏳️‍🌈  B4D AP0L 🏳️‍🌈🏳️‍🌈🏳️‍🌈";
 let mainWindow;
 
 function createWindow () {
@@ -27,6 +27,7 @@ function createWindow () {
 }
 
 app.whenReady().then(() => {
+
 	createWindow();
 	start();
 })
@@ -48,6 +49,8 @@ function saveStorage(){
 
 function start(){
 	loadStorage();
+
+	chlorophytum.initStorage(storage);
 
 	if (!storage["serviceKey"])
 		sendServiceKeyRequest().then((key) => setServiceKey(key));
@@ -90,41 +93,12 @@ const IAP_TYPE_NAMES = {
 	"nc" : IAP_TYPE_NC
 }
 
-const ENDPOINTS = {
-	serviceKey:            "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
-	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
-	login:                 "https://idmsa.apple.com/appleauth/auth/signin",
-	code:                  "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
-	preferredCurrencies:   "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
-	userdetails:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
-	listApps:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
-	listIAPs:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
-	listFamilies:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/families",                          //appId
-	iapDetails:            "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#",                                 //appId, productId
-	iapTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/template",                        //appId, type
-	famTemplate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/template",                   //appId
-	priceMatrixRecurring:  "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix/recurring",          //appId
-	priceMatrixConsumable: "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/pricing/matrix?iapType=consumable", //appId
-	equalize:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/equalize/USD/#",          //appId, productId, tier
-	create:                "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
-	createFamily:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/family/",                           //appId
-	rsPriceCreate:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing/subscriptions",           //appId, productId
-	pricingDownload:       "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing",                         //appId, productId
-	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
-	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
-	countryCodesBetter:    "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/pricing/supportedCountries"
-}
-
-const METHOD_GET = "GET";
-const METHOD_POST = "POST";
-const METHOD_PUT = "PUT";
-
 let mainProgressList = [];
 function setMainProgressList(list){
 	mainProgressList = list;
 }
 function sendProgressData(data){
-	if (data.message == BAD_APOL) data.status = "done_badapol";
+	if (data.message == chlorophytum.BAD_APOL) data.status = "done_badapol";
 
 	let target = null;
 	for (let item of mainProgressList){
@@ -188,7 +162,7 @@ async function respondToCommand(command){
 		case ("RESET"): {
 			storage = {};
 			saveStorage();
-			let key = await sendServiceKeyRequest();
+			let key = await chlorophytum.sendServiceKeyRequest();
 			setServiceKey(key);
 			return("OK");
 			break;
@@ -197,13 +171,13 @@ async function respondToCommand(command){
 		break;
 	}
 	case ("START"): {
-		let olympusResponse = await sendToOlympus();
+		let olympusResponse = await chlorophytum.sendToOlympus();
 		if (olympusResponse == "AUTH"){
 			response.code = RESPONSE_CODES.AUTH;
 			return response;
 		} else {
 			if (!storage["team"]){
-				let ud = await sendUserDetails();
+				let ud = await chlorophytum.sendUserDetails();
 				if (ud == "AUTH"){
 					response.code = RESPONSE_CODES.AUTH;
 					return response;
@@ -241,7 +215,7 @@ async function respondToCommand(command){
 		break;
 	}
 	case ("LOGIN"): {
-		let loginResponse = await sendLogin(command.options.login, command.options.password);
+		let loginResponse = await chlorophytum.sendLogin(command.options.login, command.options.password);
 
 		if (loginResponse == "CODE"){
 			response.code = RESPONSE_CODES.CODE;
@@ -253,7 +227,7 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("CODE"): {
-		let codeResponse = await sendCode(command.options.code);
+		let codeResponse = await chlorophytum.sendCode(command.options.code);
 		if (codeResponse == "OK"){
 			//Repeat start sequence in order to check teams and obtain active session
 			let fakeStartCommand = {
@@ -274,7 +248,7 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("APPS"): {
-		let appsResponse = await sendAppsRequest();
+		let appsResponse = await chlorophytum.sendAppsRequest();
 
 		if (appsResponse == "AUTH"){
 			response.code = RESPONSE_CODES.AUTH;
@@ -299,7 +273,7 @@ async function respondToCommand(command){
 	case ("SEL_APP"): {
 		if (!storage.rsMatrix){
 			sendStatusUpdate("Downloading RS price matrix (1/3)");
-			let rsmResponse = await sendRSMatrixRequest(command.options.appId);
+			let rsmResponse = await chlorophytum.sendRSMatrixRequest(command.options.appId);
 			if (rsmResponse == "AUTH"){
 				response.code = RESPONSE_CODES.AUTH;
 				return response;
@@ -325,7 +299,7 @@ async function respondToCommand(command){
 
 		if (!storage.cMatrix){
 			sendStatusUpdate("Downloading C price matrix (2/3)");
-			let cmResponse = await sendCMatrixRequest(command.options.appId);
+			let cmResponse = await chlorophytum.sendCMatrixRequest(command.options.appId);
 			if (cmResponse == "AUTH"){
 				response.code = RESPONSE_CODES.AUTH;
 				return response;
@@ -351,7 +325,7 @@ async function respondToCommand(command){
 
 		if (!storage.countryCodes){
 			sendStatusUpdate("Downloading list of countries (3/3)");
-			let ccResponse = await sendCountriesRequest();
+			let ccResponse = await chlorophytum.sendCountriesRequest();
 			let ccParsed = JSON.parse(ccResponse).data;
 			let codesArray = [];
 			for (let country of ccParsed)
@@ -411,7 +385,7 @@ async function respondToCommand(command){
 		while (errorCount > 0 && tries > 0){
 			--tries;
 
-			let response = await sendIAPsRequest(command.options.appId);
+			let response = await chlorophytum.sendIAPsRequest(command.options.appId);
 			sendStatusUpdate("Downloaded IAP list (1/3)");
 			let parsed = JSON.parse(response).data;
 			sendStatusUpdate("Downloaded IAP list (1/3): " + parsed.length + " IAPs detected");
@@ -422,7 +396,7 @@ async function respondToCommand(command){
 			
 			for (let product of parsed){
 				if (!findIAPByAdamId(results, product.adamId))
-					dontMakeNoPromises.push(sendIAPDetailsRequest(command.options.appId, product.adamId));
+					dontMakeNoPromises.push(chlorophytum.sendIAPDetailsRequest(command.options.appId, product.adamId));
 			}
 			let responses;
 			try {
@@ -529,7 +503,7 @@ async function respondToCommand(command){
 					let pricingPromises = [];
 					for (let rs of rsResults){
 						if (!pricingIgnoreList.includes(rs.adamId))
-							pricingPromises.push(sendRSPricingRequest(command.options.appId, rs.adamId));
+							pricingPromises.push(chlorophytum.sendRSPricingRequest(command.options.appId, rs.adamId));
 					}
 					let pricings = await Promise.all(pricingPromises);
 					sendStatusUpdate("Downloaded IAP pricings and trials (3/3), Done");
@@ -562,128 +536,7 @@ async function respondToCommand(command){
 		return ({data: results, errorCount: errorCount});
 	}
 	case ("CREATE_IAP"): {
-		function determineTier(type, price){
-			for (let t of (type == "rs") ? storage.rsMatrix : storage.cMatrix){
-				if (price == t.price){
-					return t.tier;
-				}
-			}
-			return 0;
-		}
-
-		function buildSubscriptionPricing(equalizedTierMap){
-			let data = {
-				subscriptions: []
-			}
-
-			for (let code of storage.countryCodes){
-				if (!equalizedTierMap[code]){
-					console.log("UNKNOWN CODE IN KNOWN LIST");
-					return null;
-				}
-				let tier = equalizedTierMap[code].tierStem;
-
-				let entry = {
-					errorKeys: null,
-					isEditable: true,
-					isRequired: false,
-					value: {
-						country: code,
-						grandfathered: {
-							value: "FUTURE_NONE", 
-							isEditable: false, 
-							isRequired: false, 
-							errorKeys: null
-						},
-						priceTierEffectiveDate: null,
-						priceTierEndDate: null,
-						tierStem: tier
-					}
-				}
-				data.subscriptions.push(entry);
-			}
-			return data;
-		}
-
-		function buildTrialRequest(trial, appId, productId){
-			function pad(num, size) {
-				let s = "00" + num;
-				return s.substr(s.length - size);
-			}
-			let d = new Date();
-			
-			let currentDate = "" + d.getFullYear() + "-" + pad((d.getMonth() + 1), 2) + "-" + pad(d.getDate(), 2);
-			let data = {
-				batch: [{
-					method: "POST",
-					path: "/apps/" + appId + "/iaps/" + productId + "/pricing/intro-offers",
-					value: {
-						introOffers: []
-					}
-				}]
-			}
-			for (let code of storage.countryCodes){
-				let entry = {
-					errorKeys: null,
-					isEditable: true,
-					isRequired: true,
-					value: {
-						country: code,
-						durationType: trial,
-						numOfPeriods: 1,
-						offerModeType: "FreeTrial",
-						startDate: currentDate,
-						endDate: null,
-						tierStem: null	
-					}
-				}
-				data.batch[0].value.introOffers.push(entry);
-			}
-			return data;
-		}
-
-		async function obtainFreshPurchase(appId, productBundleName, tries){
-			sendProgressData({
-				id: productBundleName + ".obtainid",
-				status: "inprogress"
-			});
-			while (tries > 0){
-				tries -= 1;
-				let iapsResponse = await sendIAPsRequest(appId);
-
-				let iapsParsed;
-				try {
-					iapsParsed = JSON.parse(iapsResponse).data;
-				} catch(e){
-					sendProgressData({
-						id: productBundleName + ".obtainid",
-						status: "done_badapol"
-					});
-					continue;
-				}
-				for (let i of iapsParsed)
-					if (i.vendorId == productBundleName){
-						sendProgressData({
-							id: productBundleName + ".obtainid",
-							status: "done_ok",
-							message: "Obtained id: " + i.adamId
-						});
-						return i;
-					}
-
-				sendProgressData({
-					id: productBundleName + ".obtainid",
-					status: "done_badapol",
-					message: "Retrying to obtain id of fresh product. Tries left: " + tries
-				});
-			}
-			sendProgressData({
-				id: productBundleName + ".obtainid",
-				status: "done_fail",
-				message: "Failed to acquire id of freshly created purchase"
-			});
-			return null;
-		}
+		
 
 		function reportErrorsIfAny(e, target){
 			if (e && e.length > 0){
@@ -710,114 +563,7 @@ async function respondToCommand(command){
 				status: "initial"
 			}];
 		}
-		function buildProgressItem(order){
-			let t = {
-				name: "IAP " + order.bundle,
-				id: order.bundle,
-				steps: [
-					{
-						name: "Load IAP template",
-						id: order.bundle + ".template",
-						status: "initial"
-					},
-					{
-						name: "Create IAP",
-						id: order.bundle + ".create",
-						status: "initial"
-					}
-				],
-				status: "initial"
-			};
-
-			if (order.type == "rs"){
-				t.steps.push({
-					name: "Get fresh product id",
-					id: order.bundle + ".obtainid",
-					status: "initial"
-				});
-				t.steps.push({
-					name: "Equalize prices",
-					id: order.bundle + ".equalize",
-					status: "initial"
-				});
-				t.steps.push({
-					name: "Add price",
-					id: order.bundle + ".price",
-					status: "initial"
-				});
-				if (order.trial != "off"){
-					t.steps.push({
-						name: "Add trial",
-						id: order.bundle + ".trial",
-						status: "initial"
-					});
-				}
-			}
-
-			return t;
-		}
-		function buildProgressItemForFamily(order){
-			let t = {
-				name: "IAP " + order.bundle,
-				id: order.bundle,
-				steps: [
-					{
-						name: "Load family template",
-						id: order.bundle + ".template",
-						status: "initial"
-					},
-					{
-						name: "Create family with IAP",
-						id: order.bundle + ".create",
-						status: "initial"
-					},
-					{
-						name: "Register new family",
-						id: order.bundle + ".register",
-						status: "initial"
-					},
-					{
-						name: "Get fresh product id",
-						id: order.bundle + ".obtainid",
-						status: "initial"
-					},
-					{
-						name: "Request IAP details for editing",
-						id: order.bundle + ".details",
-						status: "initial"
-					},
-					{
-						name: "Update details with localized name and duration",
-						id: order.bundle + ".update",
-						status: "initial"
-					},
-					{
-						name: "Equalize prices",
-						id: order.bundle + ".equalize",
-						status: "initial"
-					},
-					{
-						name: "Add price",
-						id: order.bundle + ".price",
-						status: "initial"
-					},
-					{
-						name: "Add trial",
-						id: order.bundle + ".trial",
-						status: "initial"
-					}
-
-				],
-				status: "initial"
-			};
-
-			
-				if (order.trial != "off"){
-					t.steps.push();
-				}
-
-			return t;
-		}
+		
 
 		let progressList = initProgressListWithFamily();
 		setMainProgressList(progressList)
@@ -829,7 +575,7 @@ async function respondToCommand(command){
 					id: order.bundle + ".equalize",
 					status: "inprogress"
 				});
-				let equalizedRaw = await sendEqualizeByUSDRequest(command.options.appId, productId, determineTier(order.type, order.price));
+				let equalizedRaw = await chlorophytum.sendEqualizeByUSDRequest(command.options.appId, productId, determineTier(order.type, order.price));
 				sendProgressData({
 					id: order.bundle + ".equalize",
 					status: "done_ok"
@@ -840,7 +586,7 @@ async function respondToCommand(command){
 					id: order.bundle + ".price",
 					status: "inprogress"
 				});
-				let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
+				let pricingResponse = await chlorophytum.sendRSPriceCreation(pricing, command.options.appId, productId);
 				if (pricingResponse == "OK"){
 					sendProgressData({
 						id: order.bundle + ".price",
@@ -853,7 +599,7 @@ async function respondToCommand(command){
 							status: "inprogress"
 						});
 						let trial = buildTrialRequest(order.trial, command.options.appId, productId);
-						let trialResponse = await sendTrialCreation(trial);
+						let trialResponse = await chlorophytum.sendTrialCreation(trial);
 						if (trialResponse != "OK") {
 							console.log("Failed to create trial for " + order.bundle);
 							sendProgressData({
@@ -892,7 +638,7 @@ async function respondToCommand(command){
 				id: "getfamily",
 				status: "inprogress"
 			});
-			familiesResponse = await sendFamiliesRequest(command.options.appId);
+			familiesResponse = await chlorophytum.sendFamiliesRequest(command.options.appId);
 			if (familiesResponse == "AUTH"){
 				response.code = RESPONSE_CODES.AUTH;
 				sendProgressData({
@@ -942,7 +688,7 @@ async function respondToCommand(command){
 						id: order.bundle + ".template",
 						status: "inprogress"
 					});
-					let templateResponse = await sendFamilyTemplateRequest(command.options.appId);
+					let templateResponse = await chlorophytum.sendFamilyTemplateRequest(command.options.appId);
 					sendProgressData({
 						id: order.bundle + ".template",
 						status: "done_ok"
@@ -958,7 +704,7 @@ async function respondToCommand(command){
 						id: order.bundle + ".create",
 						status: "inprogress"
 					});
-					let famCreateResponse = await sendFamilyCreation(template, command.options.appId);
+					let famCreateResponse = await chlorophytum.sendFamilyCreation(template, command.options.appId);
 
 					if (famCreateResponse == "OK"){
 						sendProgressData({
@@ -972,7 +718,7 @@ async function respondToCommand(command){
 							id: order.bundle + ".register",
 							status: "inprogress"
 						});
-						familiesResponse = await sendFamiliesRequest(command.options.appId);
+						familiesResponse = await chlorophytum.sendFamiliesRequest(command.options.appId);
 						let parsed = JSON.parse(familiesResponse).data;
 						if (parsed.length >= 1){
 							currentFamily.name = parsed[0].name.value;
@@ -1015,7 +761,7 @@ async function respondToCommand(command){
 							id: order.bundle + ".details",
 							status: "inprogress"
 						});
-						let detailsResponse = await sendIAPDetailsRequest(command.options.appId, foundFreshPurchase.adamId);
+						let detailsResponse = await chlorophytum.sendIAPDetailsRequest(command.options.appId, foundFreshPurchase.adamId);
 						let errorsMaybe = reportErrorsIfAny(requestErrors, order.bundle);
 						if (errorsMaybe){
 							sendProgressData({
@@ -1038,7 +784,7 @@ async function respondToCommand(command){
 							id: order.bundle + ".update",
 							status: "inprogress"
 						});
-						baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, foundFreshPurchase.adamId);
+						baseResponse = await chlorophytum.sendIAPDetailsRefresh(freshProduct, command.options.appId, foundFreshPurchase.adamId);
 						if (baseResponse != "OK") {
 							console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
 							sendProgressData({
@@ -1093,7 +839,7 @@ async function respondToCommand(command){
 						id: order.bundle + ".template",
 						status: "inprogress"
 					});
-					let templateResponse = await sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
+					let templateResponse = await chlorophytum.sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
 					sendProgressData({
 						id: order.bundle + ".template",
 						status: "done_ok"
@@ -1121,7 +867,7 @@ async function respondToCommand(command){
 						id: order.bundle + ".create",
 						status: "inprogress"
 					});
-					baseResponse = await sendIAPCreation(template, command.options.appId);
+					baseResponse = await chlorophytum.sendIAPCreation(template, command.options.appId);
 
 					if (baseResponse != "OK"){
 						sendProgressData({
@@ -1158,7 +904,7 @@ async function respondToCommand(command){
 							return;// response;
 						}
 
-						await sendPriceAndTrial(order, foundFreshPurchase);
+						await chlorophytum.sendPriceAndTrial(order, foundFreshPurchase);
 					}
 					finishedCount += 1;
 					console.log("Done " + finishedCount + "/" + command.options.orders.length);
@@ -1205,7 +951,7 @@ async function respondToCommand(command){
 	}
 	case ("RECREATE"): {
 		//let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
-		let iapsResponse = await sendIAPsRequest(command.options.appId);
+		let iapsResponse = await chlorophytum.sendIAPsRequest(command.options.appId);
 
 		let iapsParsed = JSON.parse(iapsResponse).data;
 		for (let i of iapsParsed){
@@ -1213,7 +959,7 @@ async function respondToCommand(command){
 			console.log(i.versions[i.versions.length - 1].itunesConnectStatus);
 			continue;
 
-			let detailsResponse = await sendIAPDetailsRequest(command.options.appId, i.adamId);
+			let detailsResponse = await chlorophytum.sendIAPDetailsRequest(command.options.appId, i.adamId);
 			let product = JSON.parse(detailsResponse).data;
 			let lc = product.versions[0].details.value[0].value.localeCode;
 			if (lc == "en-US"){
@@ -1222,7 +968,7 @@ async function respondToCommand(command){
 				product.versions[0].details.value[0].value.localeCode = "en-US";
 			}
 			
-			let editResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
+			let editResponse = await chlorophytum.sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
 			if (editResponse == "OK")
 				console.log(product.productId.value + ": Product locale edited");
 			else
@@ -1238,270 +984,8 @@ async function respondToCommand(command){
 	}
 }
 
-function getCookieKey(c){
-	return c.split("=")[0];
-}
-function addCookiesToStorage(cookies){
-	if (!storage.cookies)
-		storage.cookies = [];
-	for (let c in cookies){
-		let overwrite = false;
-		for (let ec in storage.cookies){
-			let oldKey = getCookieKey(storage.cookies[ec]);
-			let newKey = getCookieKey(cookies[c]);
-			if (oldKey == newKey){
-				overwrite = true;
-				storage.cookies[ec] = cookies[c];
-				break;
-			}
-		}
-		if (!overwrite)
-			storage.cookies.push(cookies[c]);
-	}
-	saveStorage();
-}
-function formCookieHeader(){
-	if (storage.cookies){
-		let f = storage.cookies.join("; ");
-		return f;
-	} else
-		return null;
-}
-
-function formHeader(dataLength){
-	let headers = {
-		"Content-Type": 'application/json',
-		"Content-Type": 'application/json',
-		"Content-Length": dataLength,
-		"X-Requested-With": 'XMLHttpRequest',
-		"Accept": "application/json, text/javascript"
-	}
-	if (storage["sessionId"]) headers["X-Apple-Id-Session-Id"] = storage["sessionId"];
-	if (storage["serviceKey"])   headers["X-Apple-Widget-Key"] = storage["serviceKey"];
-	if (storage["scnt"])                       headers["scnt"] = storage["scnt"];
-	
-	let storedCookies = formCookieHeader();
-	if (storedCookies)                       headers["Cookie"] = storedCookies;
-
-	return headers;
-}
-
-function applyParametersToEndpoint(endpoint, parameters){
-	let e = endpoint;
-	//Object.assign(e, endpoint);
-	for (let p of parameters){
-		e = e.replace("#", p);
-	}
-	return e;
-}
-
-
 function setServiceKey(rawdata){
 	let j = JSON.parse(rawdata);
 	storage["serviceKey"] = j.authServiceKey;
 	saveStorage();
-}
-
-//Returns response body in callback
-function sendServiceKeyRequest(){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.serviceKey, null);
-}
-
-function sendToOlympus(){
-	genericRequest("GET", null, ENDPOINTS.olympus, null);
-}
-
-function sendLogin(login, password){
-	const data = JSON.stringify({
-		accountName: login,
-		password: password,
-		rememberMe: true
-	});
-	return genericRequest("POST", data, ENDPOINTS.login, null);
-}
-
-function sendCode(code){
-	const data = JSON.stringify({ 
-		securityCode: { 
-			code: code 
-		} 
-	});
-	return genericRequest(METHOD_POST, data, ENDPOINTS.code, null);
-}
-
-function sendUserDetails(){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.userdetails, null);
-}
-
-function sendAppsRequest(){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.listApps, null);
-}
-
-function sendIAPsRequest(appId){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.listIAPs, [appId]);
-}
-
-function sendFamiliesRequest(appId){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.listFamilies, [appId]);
-}
-
-function sendRSMatrixRequest(appId){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.priceMatrixRecurring, [appId]);
-}
-
-function sendCMatrixRequest(appId){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.priceMatrixConsumable, [appId]);
-}
-
-function sendEqualizeByUSDRequest(appId, productId, tier){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.equalize, [appId, productId, tier]);
-}
-
-function sendCountriesRequest(){
-	//return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodes, null);
-	return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodesBetter, null);
-}
-
-function sendCountriesRequestLegacy(){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.countryCodes, null);
-}
-
-function sendTemplateRequest(appId, iapType){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.iapTemplate, [appId, iapType]);
-}
-
-function sendFamilyTemplateRequest(appId){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.famTemplate, [appId]);
-}
-
-function sendIAPCreation(filledTemplate, appId){
-	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), ENDPOINTS.create, [appId]);
-}
-
-function sendFamilyCreation(filledTemplate, appId){
-	return genericRequest(METHOD_POST, JSON.stringify(filledTemplate), ENDPOINTS.createFamily, [appId]);
-}
-
-function sendIAPDetailsRequest(appId, productId){
-	return genericRequest(METHOD_GET, null, ENDPOINTS.iapDetails, [appId, productId]);
-}
-
-function sendIAPDetailsRefresh(updated, appId, productId){
-	return genericRequest(METHOD_PUT, JSON.stringify(updated), ENDPOINTS.iapDetails, [appId, productId]);
-}
-
-function sendRSPriceCreation(pricing, appId, productId){
-	return genericRequest(METHOD_POST, JSON.stringify(pricing), ENDPOINTS.rsPriceCreate, [appId, productId]);
-}
-
-function sendRSPricingRequest(appId, productId){
-	return new Promise(async resolve => {
-		let response = await genericRequest(METHOD_GET, null, ENDPOINTS.pricingDownload, [appId, productId]);
-		resolve ({adamId: productId, data: response});
-	});
-}
-
-function sendTrialCreation(trial){
-	return genericRequest(METHOD_POST, JSON.stringify(trial), ENDPOINTS.trialCreate, null);
-}
-
-function sendTrialCreation(trial){
-	return genericRequest(METHOD_POST, JSON.stringify(trial), ENDPOINTS.trialCreate, null);
-}
-
-let requestErrors = [];
-function genericRequest(method, data, endpoint, endpointParameters, tries = 7){
-	function checkForErrors(body){
-		try {
-			let r = JSON.parse(body);
-			if (r.data){
-				if (r.data.sectionErrorKeys){
-					requestErrors = r.data.sectionErrorKeys;
-				}
-			}
-		} catch (e){}
-	}
-	return new Promise(resolve => {
-		const options = {
-			method: method,
-			headers: formHeader((method == "GET") ? 0 : data.length)
-		}
-		
-		let requestTarget;
-		if (endpointParameters)
-			requestTarget = applyParametersToEndpoint(endpoint, endpointParameters);
-		else
-			requestTarget = endpoint;
-		const req = https.request(requestTarget, options, res => {
-			addCookiesToStorage(res.headers["set-cookie"]);
-			if (endpoint == ENDPOINTS.login || endpoint == ENDPOINTS.olympus){
-				storage["scnt"] = res.headers["scnt"];
-				storage["sessionId"] = res.headers["x-apple-id-session-id"];
-				saveStorage();
-			}
-
-			let data = [];
-			res.on('data', chunk => {
-				data.push(chunk);
-			});
-			res.on('end', async () => {
-				requestErrors = [];
-
-				let responseBody = Buffer.concat(data).toString();
-				if (res.headers["content-encoding"] == "gzip"){
-					if (method != "POST")
-						console.log("WARNING: got gzipped response to " + method + " request.\nEndpoint: " + requestTarget);
-					responseBody = zlib.gunzipSync(Buffer.concat(data)).toString();
-				}
-				checkForErrors(responseBody);
-
-				switch (res.statusCode){
-				case (200):
-				case (201):
-				case (204):
-					if (method == "GET")
-						resolve(responseBody);
-					else
-						resolve("OK");
-					break;
-				case (401):
-					resolve("AUTH");
-					break;
-				case (409):
-					resolve("CODE");
-					break;
-				case (412):
-					checkForErrors(responseBody);
-					if (endpoint == ENDPOINTS.login || endpoint == ENDPOINTS.olympus)
-						resolve("Need to acknowledge to Apple's bullshit agreements");
-					else
-						resolve(responseBody)
-					break;
-				case (422):
-					checkForErrors(responseBody);
-					resolve("MALFORMED REQUEST");
-					break;
-				case (502):
-				case (503):
-				case (504):
-					let message = `Request failed after retries: ${res.statusCode} at ${endpoint}`;
-					console.log(message);
-					console.log(responseBody);
-					requestErrors = [BAD_APOL]
-					resolve(message);
-				default:
-					console.log(`Unknown status: ${res.statusCode} at ${endpoint}`);
-					resolve(responseBody);
-					break;
-				}
-			});
-		});
-
-		req.on('error', error => {
-			console.error(error);
-		})
-
-		if (data) req.write(data);
-		req.end();
-	});
 }
