@@ -1,7 +1,7 @@
 {
   "name": "strelitzia",
   "productName": "Strelitzia",
-  "version": "0.11.0",
+  "version": "0.11.3",
   "description": "Because launching Spaceship is called rocket science",
   "main": "src/strelitzia.js",
   "scripts": {

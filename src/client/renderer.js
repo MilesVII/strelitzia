@@ -585,6 +585,9 @@ function sendLogin(){
 			case(RESPONSE_CODES.CODE):
 				startCodeRequest();
 				break;
+			case(RESPONSE_CODES.AUTH):
+				status("Incorrect login or password");
+				break;
 			case(RESPONSE_CODES.OK):
 				status("Signed in without code");
 				loginComplete();

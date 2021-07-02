@@ -3,20 +3,118 @@ Delphinium.js
 
 Delphinium is Strelitzia module responsible for orchestrating processes provided by Argentea
 
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠉⠉⠛⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠉⠀⠀⠀⠀⢀⡀⠄⣶⣶⠠⢀⡀⠀⠀⠀⠀⠉⠛⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠋⠁⠀⠀⠀⢀⡠⠔⠊⠁⠀⢀⣿⣿⡀⠀⠈⠑⠢⢄⡀⠀⠀⠀⠈⠙⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⠁⠀⠀⠀⢀⣤⣶⣷⡀⠀⠀⠀⠀⢸⣿⣿⡇⠀⠀⠀⠀⢀⣾⣶⣤⡀⠀⠀⠀⠈⠛⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠉⠀⠀⠀⢀⠔⠊⠀⢹⣿⣿⣿⣄⠀⠀⠀⢸⣿⣿⡇⠀⠀⠀⣠⣿⣿⣿⠏⠀⠑⠠⡀⠀⠀⠀⠙⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠁⠀⠀⢀⠠⠊⠀⠀⠀⠀⠀⠹⣿⣿⣿⣦⣠⣴⣾⣿⣿⣷⣦⣄⣴⣿⣿⣿⠏⠀⠀⠀⠀⠀⠑⠄⡀⠀⠀⠈⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⡀⠐⠁⠀⠀⠀⠀⠀⠀⠀⠀⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠈⠂⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⠿⠛⠉⠁⠈⠉⠛⠿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠠⡄⠒⠒⠠⠄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⠀⠀⡀⠔⠈⠀⠀⡇⠀⠀⠀⠀⠀⠁⠢⢀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣄⠀⠀⠀⠀⠀⠀⠀⠀⠃⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣤⣸⠀⠀⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣇⣤⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⢠⣿⣿⣿⣿⣿⣿⣿⣿⣦⣠⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣆⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠁⢰⣿⣿⣿⣿⠿⣿⣿⣿⣿⣿⣿⡄⠀⣀⠀⠀⣀⣤⣾⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⣿⡆⠈⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⣿⣿⣿⣿⡟⠀⢹⣿⣿⣿⣿⣿⣷⣄⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢻⣿⣿⣿⣿⠀⠀⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠀⠀⢸⣿⣿⣿⡟⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⢻⣿⣿⣿⡇⠀⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⣿⣿⣿⡟⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⡿⠁⠘⢿⣿⣿⣿⣿⣿⣿⣇⠀⠀⠀⠀⢻⣿⣿⣿⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠈⠻⠿⠃⠀⠀⠀⢀⣿⣿⣿⣿⣿⡿⠋⠀⠔⠢⠀⠙⢿⣿⣿⣿⣿⣿⡀⠀⠀⠀⠘⠿⠟⠉⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⡟⠁⠀⠀⢂⡐⠀⠀⠈⢻⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⢠⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣯⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⣽⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⡄⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠹⣿⣿⣿⣧⠀⠀⠘⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣆⠈⠁⠀⠀⠀⠀⠈⠁⣰⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠃⠀⠀⣼⣿⣿⣿⠏⠈⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠀⠀⠀⢹⣿⣿⣿⡄⠀⠀⠀⠀⠀⣀⣴⣿⣿⣿⣿⣿⣿⣿⣆⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⣿⣿⣿⣿⣦⡀⠀⠀⠀⠀⠀⢠⣿⣿⣿⡏⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⢻⣿⣿⣷⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⣾⣿⣿⡟⠀⠀⠀⠀⠀⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠻⣿⣿⣇⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⢸⡇⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⣸⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⢀⢄⠀⠀⠹⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⢸⡇⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠏⠀⠀⡠⡀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠀⠀⠀⠆⠈⢆⠀⠀⠀⠀⠉⠙⢻⣿⣿⣿⣿⣿⣿⣿⣿⡿⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠋⠉⠀⠀⠀⠀⡰⠁⠰⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠈⠀⠀⠀⠂⡀⠀⠀⠀⠀⠈⣿⣿⣿⣿⣿⣿⣿⡿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣿⣿⣿⣿⣿⣿⣿⠁⠀⠀⠀⠀⢀⠐⠀⠀⠀⠁⠀⠀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠈⡀⠀⠀⠀⠈⠐⠠⠄⡀⠀⠸⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⠇⠀⢀⠠⠄⠂⠁⠀⠀⠀⢠⠁⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⠐⡀⠀⠀⢰⠀⠀⠀⠀⠉⠀⣿⣿⣿⣿⣿⡿⠐⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⢿⣿⣿⣿⣿⣿⠀⠉⠀⠀⠀⠀⡆⠀⠀⢀⠂⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⠁⠀⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡈⠀⠘⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠘⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣿⣿⣿⡇⠀⠀⠀⠐⢀⠀⠀⠀⠀⠀⠀⡀⠒⠀⠀⠀⢸⣿⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠇⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣦⣄⡀⠀⠀⠀⢂⠀⠀⠀⠀⡐⠀⠀⠀⢀⣠⣴⣿⣿⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣄⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣷⠢⠤⢌⣆⣀⣀⣰⡠⠤⠔⣾⣿⣿⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⣠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣮⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⣿⣿⣿⣿⣿⠃⠀⢀⠂⢸⣿⣿⡇⠐⡀⠀⠘⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣽⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠇⠀⠀⠄⠀⣿⣿⣿⣷⠀⠠⠀⠀⠸⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⡟⠀⠀⠐⠀⠀⣿⣿⣿⣿⠀⠀⠂⠀⠀⢻⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⢸⣿⣿⡇⠀⠀⠡⠀⠀⣿⣿⣿⣿⠀⠀⠄⠀⠀⢸⣿⣿⡇⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣤⡀⠀⠀⠀⢸⢻⣿⣷⠀⠀⠀⠀⠈⣿⣿⣿⣿⠁⠀⠀⠠⠊⣾⣿⡟⡇⠀⠀⠀⢀⣤⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⣄⠀⢸⢠⣿⣿⡄⠀⠀⠀⠀⣿⣿⣿⣿⠀⢀⠄⢀⢤⣿⣿⡄⡇⠀⣠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣾⣿⣿⣿⣧⠀⠀⠀⠀⣿⣿⣿⣿⠀⠁⡠⠀⣼⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⣿⣿⣿⣿⠀⠈⠀⢠⣿⣿⣿⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⣿⣿⣿⣿⠀⠀⠀⣾⣿⣿⣣⡏⢛⡟⠛⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣆⠀⠀⣿⣿⣿⣿⠀⠀⣰⣿⣿⢯⢿⡷⣿⣿⢘⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⣿⣿⣿⣿⠀⢠⣿⣿⣯⣿⣿⣾⣷⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⣿⣿⣿⣿⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⣿⣿⣿⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+
 https://www.deviantart.com/argonaut11/art/Delphinium-Darling-In-the-Franxx-756840835
 */
 
 const argentea = require("./argentea.js");
 const DEFAULT_FAMILY_NAME = "Subscriptions";
+const DEBUG_FAMILY_BYPASS = false;
 
 module.exports = {
+	requestServiceKey: async()=>{
+		return await argentea.requestServiceKey();
+	},
+	checkSession: async()=>{
+		return await argentea.checkSession();
+	},
+	listTeams: async ()=>{
+		return await argentea.listTeams();
+	},
+	login: async (login, password)=>{
+		return await argentea.login(login, password);
+	},
+	sendCode: async (code)=>{
+		return await argentea.sendCode(code);
+	},
+	listApps: async ()=>{
+		return await argentea.listApps();
+	},
+	/* [RS Matrix, C Matrix, Country Codes] */
+	downloadMatrices: async (appId)=>{
+		let promises = [
+			argentea.downloadRSMatrix(appId),
+			argentea.downloadCMatrix(appId),
+			argentea.downloadCountryCodes(appId)
+		];
+		return await Promise.all(promises);
+	},
+	downloadIAPs: async (appId)=>{
+		let iaps = await argentea.listIAPs(appId);
+		if (!iaps) return null;
+
+		let dontMakeNoPromises = [];
+		let yourBodyCantKeep = [];
+
+		for (let iap of iaps){
+			dontMakeNoPromises.push(argentea.downloadIAP(appId, iap.adamId));
+		}
+		yourBodyCantKeep = await Promise.all(dontMakeNoPromises);
+		for (let raw of yourBodyCantKeep){
+			parseIAP(raw);
+		}
+
+		return null;
+	},
 	createIAPs: async (orders, appId, storage, sequentialMode)=>{
 		argentea.planning.resetProgressList();
 
 		let firstRSOrder = getFirstRSOrder(orders);
+		let firstRSOrderCreated = false;
+		let selectedFamily;
 		if (firstRSOrder){
 			argentea.planning.planFamilyCheck();
-			let selectedFamily = await argentea.operations.selectFamily(appId, false, DEFAULT_FAMILY_NAME);
+			selectedFamily = await argentea.operations.selectFamily(appId, false, DEFAULT_FAMILY_NAME);
 			if (!selectedFamily)
 				return false;
 			
@@ -40,12 +138,13 @@ module.exports = {
 
 				if (! await argentea.operations.createFamily(firstRSOrder.bundle, tempalte, appId))
 					return false;
+				firstRSOrderCreated = true;
 				
 				selectedFamily = await argentea.operations.selectFamily(appId, true, selectedFamily.name);
 				if (!(selectedFamily && selectedFamily.id))
 					return false;
 
-				let productId = await argentea.operations.obtainFreshPurchase(firstRSOrder.bundle, appId);
+				let productId = await argentea.operations.obtainProductId(firstRSOrder.bundle, appId);
 				if (!productId)
 					return false;
 
@@ -62,6 +161,67 @@ module.exports = {
 			}
 		}
 		//Create the rest of IAPs
+		for (order of orders){
+			if (firstRSOrderCreated && order == firstRSOrder) continue;
+			argentea.planning.planIAPCreation(order);
+		}
+		let promises = [];
+		for (order of orders){
+			if (firstRSOrderCreated && order == firstRSOrder) continue;
+			
+			promises.push(new Promise(async (resolve, reject)=>{
+				let tempalte = await argentea.operations.requestIAPTemplate(order.bundle, appId);
+				if (!template){
+					reject();
+					return false;
+				}
+
+				template.familyId = selectedFamily.id;
+				template.productId = {value: order.bundle};
+				template.referenceName = {value: order.refname};
+				template.clearedForSale = {value: true};
+				template.pricingIntervals = [{value:{
+					country: "WW",
+					tierStem: determineTier(order.type, order.price, storage.rsMatrix, storage.cMatrix),
+					priceTierEndDate: null,
+					priceTierEffectiveDate: null
+				}}]
+				template.versions[0].details.value = [buildEnUsVersion(order.version.name, order.version.desc)];
+				
+				if (order.type == "rs"){
+					template.pricingDurationType = {value: order.duration};
+				}
+
+				if (! await argentea.operations.createIAP(order.bundle, template, appId)){
+					reject();
+					return false;
+				}
+
+				if (order.type == "rs"){
+					let productId = await argentea.operations.obtainProductId(order.bundle, appId);
+					if (!productId){
+						reject();
+						return false;
+					}
+
+					if (! await sendPriceAndTrial(order, appId, productId, storage.rsMatrix, storage.cMatrix, storage.countryCodes)){
+						reject();
+						return false;
+					}
+				}
+
+				resolve();
+				return true;
+			}));
+		}
+		if (sequentialMode){
+			for (let promise of promises){
+				await promise;
+			}
+		} else {
+			await Promise.all(promises);
+		}
+		return true;
 	}
 }
 
@@ -72,16 +232,17 @@ function getFirstRSOrder(orders){
 	return null;
 }
 
-async function sendPriceAndTrial(order, appId, productId, rsMatrix, cMatrix, countryCodes){
-	function determineTier(type, price){
-		for (let t of (type == "rs") ? rsMatrix : cMatrix){
-			if (price == t.price){
-				return t.tier;
-			}
+function determineTier(type, price, rsMatrix, cMatrix){
+	for (let t of (type == "rs") ? rsMatrix : cMatrix){
+		if (price == t.price){
+			return t.tier;
 		}
-		return 0;
 	}
-	let equalizedTierMap = await argentea.operations.equalizeByUSD(order.bundle, appId, productId, determineTier("rs", order.price));
+	return 0;
+}
+
+async function sendPriceAndTrial(order, appId, productId, rsMatrix, cMatrix, countryCodes){
+	let equalizedTierMap = await argentea.operations.equalizeByUSD(order.bundle, appId, productId, determineTier("rs", order.price, rsMatrix, cMatrix));
 
 	if (! await argentea.operations.createRSPricing(order.bundle, equalizedTierMap, countryCodes, appId, productId))
 		return false;
@@ -101,369 +262,87 @@ function buildEnUsVersion(name, description){
 	}};
 }
 
-
-
-
-
-
-
-
-/*
-
-function reportErrorsIfAny(e, target){
-	if (e && e.length > 0){
-		console.log("Errors (" + target + "): ");
-		console.log(e.join("\n"));
-		console.log("\n");
-		return e.join("\n");
-	}
-	return null;
-}
-
-
-
-
-
-
-
-
-let familiesResponse = null;
-if (firstRSOrder){
-	sendProgressData({
-		id: "getfamily",
-		status: "inprogress"
-	});
-	familiesResponse = await sendFamiliesRequest(command.options.appId);
+function parseIAP(raw, rsMatrix, cMatrix){
+	const REVERSE_TYPE_MAP = {
+		"recurring": "rs",
+		"consumable" : "c",
+		"nonConsumable": "nc"
+	};
 	
-	let parsed = JSON.parse(familiesResponse).data;
-	
-	if (parsed.length >= 1){
-		currentFamily.name = parsed[0].name.value;
-		currentFamily.id = parsed[0].id;
-		sendProgressData({
-			id: "getfamily",
-			status: "done_ok",
-			message: "Detected existing family. Using \"" + currentFamily.name + "\""
-		});
-	} else {
-		sendProgressData({
-			id: "getfamily",
-			status: "done_warning",
-			message: "No families detected, will create a new one with name \"" + command.options.defaultFamilyName + "\""
-		});
+	function findRSPrice(from, country){
+		if (!from) return null;
+		let tier = null;
 
-		let order = firstRSOrder;
-		let baseResponse;
-		let foundFreshPurchase = null;
-		
-		progressList.push(buildProgressItemForFamily(order));
-
-		sendProgressData({
-			id: order.bundle,
-			status: "inprogress"
-		});
-
-		//Create subscription together with family
-		sendProgressData({
-			id: order.bundle + ".template",
-			status: "inprogress"
-		});
-		let templateResponse = await sendFamilyTemplateRequest(command.options.appId);
-		sendProgressData({
-			id: order.bundle + ".template",
-			status: "done_ok"
-		});
-
-		let template = JSON.parse(templateResponse).data;
-		template.activeAddOns[0].productId = {value: order.bundle};
-		template.activeAddOns[0].referenceName = {value: order.refname};
-		//template.activeAddOns[0].pricingDurationType = {value: order.duration}; //doesn't work
-		template.name = {value: command.options.defaultFamilyName};
-		template.details.value = [];
-		sendProgressData({
-			id: order.bundle + ".create",
-			status: "inprogress"
-		});
-		let famCreateResponse = await sendFamilyCreation(template, command.options.appId);
-
-		if (famCreateResponse == "OK"){
-			sendProgressData({
-				id: order.bundle + ".create",
-				status: "done_ok"
-			});
-
-
-			//Register freshly created family
-			sendProgressData({
-				id: order.bundle + ".register",
-				status: "inprogress"
-			});
-			familiesResponse = await sendFamiliesRequest(command.options.appId);
-			let parsed = JSON.parse(familiesResponse).data;
-			if (parsed.length >= 1){
-				currentFamily.name = parsed[0].name.value;
-				currentFamily.id = parsed[0].id;
-				sendProgressData({
-					id: order.bundle + ".register",
-					status: "done_ok"
-				});
-			} else {
-				sendProgressData({
-					id: order.bundle + ".register",
-					status: "done_fail",
-					message: "Can not find freshly created family"
-				});
+		for (let price of from){
+			if (price.value.country == country){
+				tier = price.value.tierStem;
+				break;
 			}
-
-			sendProgressData({
-				id: order.bundle + ".obtainid",
-				status: "inprogress"
-			});
-			foundFreshPurchase = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
-
-			if (foundFreshPurchase){
-				sendProgressData({
-					id: order.bundle + ".obtainid",
-					status: "done_ok"
-				});
-			} else {
-				response.code = RESPONSE_CODES.ERROR;
-				response.message = "Failed to find freshly created IAP";
-				sendProgressData({
-					id: order.bundle + ".obtainid",
-					status: "done_fail",
-					message: response.message
-				});
-				return response;
-			}
-
-			sendProgressData({
-				id: order.bundle + ".details",
-				status: "inprogress"
-			});
-			let detailsResponse = await sendIAPDetailsRequest(command.options.appId, foundFreshPurchase.adamId);
-			let errorsMaybe = reportErrorsIfAny(requestErrors, order.bundle);
-			if (errorsMaybe){
-				sendProgressData({
-					id: order.bundle + ".details",
-					status: "done_fail",
-					message: errorsMaybe
-				});
-			} else {
-				sendProgressData({
-					id: order.bundle + ".details",
-					status: "done_ok"
-				});
-			}
-			
-			let freshProduct = JSON.parse(detailsResponse).data;
-			freshProduct.versions[0].details.value = [versions];
-			freshProduct.pricingDurationType = {value: order.duration};
-			
-			sendProgressData({
-				id: order.bundle + ".update",
-				status: "inprogress"
-			});
-			baseResponse = await sendIAPDetailsRefresh(freshProduct, command.options.appId, foundFreshPurchase.adamId);
-			if (baseResponse != "OK") {
-				console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
-				sendProgressData({
-					id: order.bundle + ".update",
-					status: "done_fail",
-					message: reportErrorsIfAny(requestErrors, order.bundle)
-				});
-			} else {
-				sendProgressData({
-					id: order.bundle + ".update",
-					status: "done_ok"
-				});
-			}
-
-			await sendPriceAndTrial(order, foundFreshPurchase);
-			sendProgressData({
-				id: order.bundle,
-				status: "done_ok"
-			});
-		} else {
-			sendProgressData({
-				id: order.bundle + ".create",
-				status: "done_failed",
-				message: "Failed to create family, aborting"
-			});
-			response.code = RESPONSE_CODES.ERROR;
-			return response;
 		}
-	}
-}
 
-function prepareOrder(order){
-	return new Promise(async resolve => {
-		try {
-			sendProgressData({
-				id: order.bundle,
-				status: "inprogress"
-			});
-
-			let baseResponse;
-			let foundFreshPurchase = null;
-			
-			let versions = {value: {
-				description: {value: order.version.desc},
-				name:        {value: order.version.name},
-				localeCode:  "en-US"
-			}};
-
-			//Create IAP normally
-			sendProgressData({
-				id: order.bundle + ".template",
-				status: "inprogress"
-			});
-			let templateResponse = await sendTemplateRequest(command.options.appId, IAP_TYPE_NAMES[order.type]);
-			sendProgressData({
-				id: order.bundle + ".template",
-				status: "done_ok"
-			});
-
-			let template = JSON.parse(templateResponse).data;
-			template.familyId = currentFamily.id;
-			template.productId = {value: order.bundle};
-			template.referenceName = {value: order.refname};
-			template.clearedForSale = {value: true};
-
-			template.pricingIntervals = [{value:{
-				country: "WW",
-				tierStem: determineTier(order.type, order.price),
-				priceTierEndDate: null,
-				priceTierEffectiveDate: null
-			}}]
-
-			template.versions[0].details.value = [versions];
-			
-			if (order.type == "rs"){
-				template.pricingDurationType = {value: order.duration};
-			}
-			sendProgressData({
-				id: order.bundle + ".create",
-				status: "inprogress"
-			});
-			baseResponse = await sendIAPCreation(template, command.options.appId);
-
-			if (baseResponse != "OK"){
-				sendProgressData({
-					id: order.bundle + ".create",
-					status: "done_fail",
-					message: reportErrorsIfAny(requestErrors, order.bundle)
-				});
-				finishedCount += 1;
-
-				console.log("Fail " + finishedCount + "/" + command.options.orders.length + ": " + order.bundle);
-				sendProgressData({
-					id: order.bundle,
-					status: "done_fail",
-					message: reportErrorsIfAny(requestErrors, order.bundle)
-				});
-
-				resolve();
-				return;
-			}
-			sendProgressData({
-				id: order.bundle + ".create",
-				status: "done_ok"
-			});
-			if (order.type == "rs"){
-				//Proceed to create pricing and trial
-
-				if (!foundFreshPurchase)
-					foundFreshPurchase = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
-
-				if (!foundFreshPurchase){
-					response.code = RESPONSE_CODES.ERROR;
-					response.message = "Failed to find freshly created IAP";
-					resolve();
-					return;// response;
-				}
-
-				await sendPriceAndTrial(order, foundFreshPurchase);
-				
-				// let productId = foundFreshPurchase.adamId;
-				// let equalizedRaw = await sendEqualizeByUSDRequest(command.options.appId, productId, determineTier(order.type, order.price));
-				// let equalized = JSON.parse(equalizedRaw).data;
-				// let pricing = buildSubscriptionPricing(equalized);
-				// sendProgressData({
-				// 	id: order.bundle + ".price",
-				// 	status: "inprogress"
-				// });
-				// let pricingResponse = await sendRSPriceCreation(pricing, command.options.appId, productId);
-				// if (pricingResponse == "OK"){
-				// 	sendProgressData({
-				// 		id: order.bundle + ".price",
-				// 		status: "done_ok"
-				// 	});
-					
-				// 	if (order.trial != "off"){
-				// 		sendProgressData({
-				// 			id: order.bundle + ".trial",
-				// 			status: "inprogress"
-				// 		});
-				// 		let trial = buildTrialRequest(order.trial, command.options.appId, productId);
-				// 		let trialResponse = await sendTrialCreation(trial);
-				// 		if (trialResponse != "OK") {
-				// 			console.log("Failed to create trial for " + order.bundle);
-				// 			sendProgressData({
-				// 				id: order.bundle + ".trial",
-				// 				status: "done_fail",
-				// 				message: reportErrorsIfAny(requestErrors, order.bundle)
-				// 			});
-				// 		} else {
-				// 			sendProgressData({
-				// 				id: order.bundle + ".trial",
-				// 				status: "done_ok"
-				// 			});
-				// 		}
-				// 	}
-				// } else {
-				// 	sendProgressData({
-				// 		type: "update",
-				// 		id: order.bundle + ".price",
-				// 		status: "done_fail",
-				// 		message: reportErrorsIfAny(requestErrors, order.bundle)
-				// 	});
-				// }
-			}
-			finishedCount += 1;
-			console.log("Done " + finishedCount + "/" + command.options.orders.length);
-
-			sendProgressData({
-				type: "update",
-				id: order.bundle,
-				status: "done_ok"
-			});
-			resolve();
-			return;
-		} catch (e) {
-			sendProgressData({
-				type: "update",
-				id: order.bundle,
-				status: "done_fail",
-				message: "Error occurred: " + e.name + ": " + e.message + "\n" + e.stack
-			});
+		if (tier){
+			for (let rsPrice of rsMatrix)
+				if (rsPrice.tier == tier)
+					return rsPrice.price;
 		}
-		resolve();
-	});
-}
 
-let finishedCount = 0;
-let mainListOfOrders = [];
-for (let order of command.options.orders){
-	if (order != firstRSOrder){
-		progressList.push(buildProgressItem(order));
-		mainListOfOrders.push(prepareOrder(order));
+		return null;
 	}
+	function findCPrice(tier){
+		if (!tier) return null;
+
+		for (let cPrice of cMatrix){
+			if (cPrice.tier == tier){
+				return cPrice.price;
+			}
+		}
+
+		return null;
+	}
+	function findTrial(from, country){
+		if (!from) return null;
+		let tier = null;
+
+		for (let offer of from){
+			if (offer.value.country == country){
+				return offer.value.durationType;
+			}
+		}
+
+		return null;
+	}
+
+	let result = {
+		adamId: raw.adamId,
+		type: REVERSE_TYPE_MAP[raw.addOnType],
+		refname: raw.referenceName.value,
+		bundle: raw.productId.value,
+		version: {
+			name: null, //raw.versions[0].details.value[0].value.name.value,
+			desc: null //raw.versions[0].details.value[0].value.description.value
+		}
+		// duration: raw.pricingDurationType.value,
+		// trial: null,
+		// price: null
+	};
+	if (raw.versions.length > 0 && raw.versions[0].details.value.length > 0){
+		result.version.name = raw.versions[0].details.value[0].value.name.value;
+		result.version.desc = raw.versions[0].details.value[0].value.description.value;
+	}
+	switch (result.type){
+		case ("rs"): {
+			result.duration = pricingDurationType.value;
+			result.trial = findTrial(raw.appliedPricingData.introOffers, "US");
+			result.price = findRSPrice(raw.appliedPricingData.subscriptions, "US");
+			break;
+		}
+		case ("c"):
+		case ("nc"):{
+			result.price = findCPrice(raw.pricingIntervals[0].value.tierStem) || "off";
+			break;
+		}
+		default:
+			return null;
+	}
+	return result;
 }
-
-await Promise.all(mainListOfOrders);
-
-console.log("Finished");
-response.code = RESPONSE_CODES.OK;
-return response;
-}*/
