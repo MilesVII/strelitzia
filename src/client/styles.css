@@ -5,7 +5,7 @@ html {
 
 body {
 	background-color: #FFF;
-	background-image: url("./back.jpg");
+	background-image: url("./backs/backS2.jpg");
 	background-size: cover;
 	background-position: center center;
 	background-attachment: fixed;
@@ -77,28 +77,20 @@ table, tr, th {
 	background-color: #DA4000;
 }
 
-#status {
-	width: 100%;
-	margin: 0 0 10px 0;
-	padding: 20px;
-	background-color: rgba(255, 177, 131, .4);
-	background-color: rgba(240, 240, 240, .6);
-	backdrop-filter: blur(5px);
-}
-
 #spreadsheet {
 	font-family: sans-serif;
 	font-weight: 200;
 	font-size: initial;
 }
 
-.dialog, .dialogDebug {
+.dialog, .dialogDebug, #status {
 	width: 100%;
 	margin: 0 0 10px 0;
 	padding: 20px;
 	background-color: rgba(255, 177, 131, .4);
 	background-color: rgba(240, 240, 240, .6);
 	backdrop-filter: blur(5px);
+	border-radius: 3px;
 }
 
 .dialog {

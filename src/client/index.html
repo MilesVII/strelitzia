@@ -83,6 +83,14 @@
 			<div class="dialog" id="dialog_sheet_create">
 				<input type="file" id="filePicker" onchange="addFromFile(this.files[0]);"></input>
 				<label class="xbutton" for="filePicker">Load from file</label>
+				<div>
+					<input type="checkbox" id="dialog_create_overwrite">
+					<label for="dialog_create_overwrite">Allow overwriting existing IAPs</label>
+				</div>
+				<div>
+					<input type="checkbox" id="dialog_create_sequential" checked>
+					<label for="dialog_create_sequential">Create IAPs sequentially (safer)</label>
+				</div>
 				<div class="slidecontainer">
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_create_confirmer" oninput="refreshCreateConfirmer(this)" onmouseup="resetCreateConfirmer(this)">
 				</div>

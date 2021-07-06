@@ -1,7 +1,7 @@
 /*
 Strelitzia.js
 
-Strelitzia is main module responsible for wrapping platform-depending code and provide Delphinium functionality to GUI
+Strelitzia is main module responsible for wrapping platform-depending code and provide Delphinium' functionality to GUI
 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢨⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -352,7 +352,10 @@ async function respondToCommand(command){
 		let progressUpdate = (progressList)=>{
 			mainWindow.webContents.send("progressUpdate", progressList);
 		}
-		return delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, true);
+		await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, coomand.options.overwriteAllowed, command.options.sequentialMode);
+
+		response.code = RESPONSE_CODES.OK;
+		return response;
 	}
 	/*scase ("EDIT_IAP"): {
 		// command.options.orders

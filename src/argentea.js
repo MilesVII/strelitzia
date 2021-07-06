@@ -247,6 +247,12 @@ module.exports = {
 			}
 
 			mainProgressList.push(t);
+		},
+		beginIAP: (bundleName)=>{
+			progress(bundleName, null, PROGRESS_INPROGRESS);
+		},
+		endIAP: (bundleName, success, message)=>{
+			progress(bundleName, null, success ? PROGRESS_DONE_OK : PROGRESS_DONE_FAIL, message);
 		}
 	},
 	/* Operations provide feedback about their progress */
@@ -258,7 +264,7 @@ module.exports = {
 				progress(bundleName, OPERATION_EQUALIZE, PROGRESS_DONE_OK);
 				return result.data;
 			} else {
-				progress(bundleName, OPERATION_EQUALIZE, PROGRESS_BAD_APOL);
+				progress(bundleName, OPERATION_EQUALIZE, PROGRESS_BAD_APOL, chlorophytum.getLastErrors());
 				return null;
 			}
 		},
@@ -270,7 +276,7 @@ module.exports = {
 				progress(bundleName, OPERATION_PRICE, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_PRICE, PROGRESS_DONE_FAIL);
+				progress(bundleName, OPERATION_PRICE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
 				return false;
 			}
 		},
@@ -281,8 +287,7 @@ module.exports = {
 			if (trialResponse == "OK") {
 				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_OK);
 			} else {
-				//let message = reportErrorsIfAny(requestErrors, order.bundle);
-				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL);
+				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
 			}
 		},
 		selectFamily: async (appId, repeated, defaultFamilyName)=>{
@@ -337,7 +342,7 @@ module.exports = {
 				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_OK);
 				return templateResponse.data;
 			} else {
-				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL);
+				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
 				return null;
 			}
 		},
@@ -349,7 +354,7 @@ module.exports = {
 				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL);
+				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
 				return false;
 			}
 		},
@@ -370,7 +375,7 @@ module.exports = {
 					message = "Retrying to obtain id of fresh product. Tries left: " + tries;
 					progress(bundleName, OPERATION_OBTAINID, PROGRESS_BADAPOL, message);
 				} else {
-					progress(bundleName, OPERATION_OBTAINID, PROGRESS_BADAPOL);
+					progress(bundleName, OPERATION_OBTAINID, PROGRESS_BADAPOL, chlorophytum.getLastErrors());
 					continue;
 				}
 			}
@@ -385,11 +390,11 @@ module.exports = {
 				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_OK);
 				return detailsResponse;
 			} else {
-				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_FAIL);
+				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
 				return null;
 			}
 		},
-		createIAP: async (bundleName, filledTemplate, appId)=>{
+		createIAP: async (bundleName, filledTemplate, appId, overwriteAllowed)=>{
 			progress(bundleName, OPERATION_CREATE, PROGRESS_INPROGRESS);
 			let createResponse = await chlorophytum.sendIAPCreation(filledTemplate, appId);
 
@@ -397,20 +402,13 @@ module.exports = {
 				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_OK);
-				return true;
-				// sendProgressData({
-				// 	id: order.bundle + ".create",
-				// 	status: "done_fail",
-				// 	message: reportErrorsIfAny(requestErrors, order.bundle)
-				// });
-
-				// console.log("Fail " + finishedCount + "/" + command.options.orders.length + ": " + order.bundle);
-				// sendProgressData({
-				// 	id: order.bundle,
-				// 	status: "done_fail",
-				// 	message: reportErrorsIfAny(requestErrors, order.bundle)
-				// });
+				if (overwriteAllowed && chlorophytum.isLastErrorIsAlreadyExistingError()){
+					progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_WARNING, chlorophytum.getLastErrors());
+					return true;
+				} else {
+					progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+					return false;
+				}
 			}
 		},
 		updateIAPDetails: async (bundleName, filledDetails, appId, productId)=>{
@@ -420,13 +418,7 @@ module.exports = {
 				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				//console.log("Failed to fill purchase details for fresh family product, please check " + order.bundle);
-				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_FAIL);
-				// sendProgressData({
-				// 	id: order.bundle + ".update",
-				// 	status: "done_fail",
-				// 	message: reportErrorsIfAny(requestErrors, order.bundle)
-				// });
+				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
 				return false;
 			}
 		}

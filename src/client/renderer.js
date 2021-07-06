@@ -134,7 +134,9 @@ function refreshCreateConfirmer(s){
 		s.value = 100;
 		s.style.backgroundColor = "#DA4000";
 		s.disabled = true;
-		createIAPs();
+		let overwriteCheck = document.getElementById("dialog_create_overwrite");
+		let sequentialCheck = document.getElementById("dialog_create_sequential");
+		createIAPs(overwriteCheck.checked, sequentialCheck.checked);
 	}		
 } 
 
@@ -695,7 +697,7 @@ function selectApp(app){
 let defaultButtonColor;
 let buttonsLocked = false;
 let editButtonsLocked = false;
-function createIAPs(){
+function createIAPs(overwriteAllowed, sequentialMode){
 	if (buttonsLocked) return;
 	buttonsLocked = true;
 	let dialog = document.getElementById("dialog_progress");
@@ -705,6 +707,8 @@ function createIAPs(){
 	let message = COMMANDS.create;
 	message.options.appId = selectedApp.id;
 	message.options.orders = collectOrders(tables["spreadsheet_create"], selectedApp.bundle);
+	message.options.overwriteAllowed = overwriteAllowed;
+	message.options.sequentialMode = sequentialMode;
 
 	let button = document.getElementById("dialog_create_confirmer");
 	//defaultButtonColor = button.style.backgroundColor;

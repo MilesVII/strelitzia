@@ -75,6 +75,34 @@ module.exports = {
 		saveStorage = saveCallback;
 	},
 
+	getLastErrors: ()=>{
+		let messages = [];
+		let counter = 0;
+		for (let e of requestErrors){
+			++counter;
+			if (e){
+				for (let m of e){
+					messages.push("Try #" + counter + ": " + m);
+				}
+			}
+		}
+		return messages.join("\n");
+	},
+
+	isLastErrorIsAlreadyExistingError: ()=>{
+		for (let t of requestErrors.slice().reverse()){
+			if (t){
+				for (let e of t){
+					if (e.includes("The product ID you entered has already been used")){
+						return true;
+					}
+				}
+				break;
+			}
+		}
+		return false;
+	},
+
 	sendServiceKeyRequest: ()=>{
 		return genericRequest(METHOD_GET, null, ENDPOINTS.serviceKey, null, JSON_EXPECTED);
 	},
@@ -278,7 +306,7 @@ async function genericRequest(method, data, endpoint, endpointParameters, jsonEx
 		await sleep(RETRY_DELAY_MS_MIN + RETRY_DELAY_MS_SPREAD * Math.random())
 		--tries;
 		try {
-			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, RETRIES - tries + 1, jsonExpected);
+			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, RETRIES - (tries + 1), jsonExpected);
 			if (response)
 				return response;
 		} catch(e){}

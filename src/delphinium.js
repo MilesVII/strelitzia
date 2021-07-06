@@ -109,7 +109,7 @@ module.exports = {
 
 		return results;
 	},
-	createIAPs: async (orders, appId, storage, progressCallback, sequentialMode)=>{
+	createIAPs: async (orders, appId, storage, progressCallback, overwriteAllowed, sequentialMode)=>{
 		argentea.planning.resetProgressList();
 		argentea.planning.setProgressCallback(progressCallback);
 
@@ -132,7 +132,13 @@ module.exports = {
 			if (!selectedFamily.id){
 				//Create family by completing first RS order 
 				argentea.planning.planFamilyCreation();
+				argentea.planning.beginIAP(firstRSOrder.bundle);
+
 				let template = await argentea.operations.requestFamilyTemplate(firstRSOrder.bundle, appId);
+				if (!template){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
+					return false;
+				}
 
 				template.activeAddOns[0].productId = {value: firstRSOrder.bundle};
 				template.activeAddOns[0].referenceName = {value: firstRSOrder.refname};
@@ -140,28 +146,42 @@ module.exports = {
 				template.name = {value: selectedFamily.name};
 				template.details.value = [];
 
-				if (! await argentea.operations.createFamily(firstRSOrder.bundle, tempalte, appId))
+				if (! await argentea.operations.createFamily(firstRSOrder.bundle, tempalte, appId)){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
+				}
 				firstRSOrderCreated = true;
 				
 				selectedFamily = await argentea.operations.selectFamily(appId, true, selectedFamily.name);
-				if (!(selectedFamily && selectedFamily.id))
+				if (!(selectedFamily && selectedFamily.id)){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
+				}
 
 				let productId = await argentea.operations.obtainProductId(firstRSOrder.bundle, appId);
-				if (!productId)
+				if (!productId){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
+				}
 
 				let productDetails = await argentea.operations.requestIAPDetails(firstRSOrder.bundle, appId, productId);
-				if (!productDetails)
+				if (!productDetails){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
+				}
 				productDetails.versions[0].details.value = [buildEnUsVersion(firstRSOrder.version.name, firstRSOrder.version.desc)];
 				productDetails.pricingDurationType = {value: order.duration};
-				if (! await argentea.operations.updateIAPDetails(firstRSOrder.bundle, productDetails, appId, productId))
+				if (! await argentea.operations.updateIAPDetails(firstRSOrder.bundle, productDetails, appId, productId)){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
+				}
 
-				if (! await sendPriceAndTrial(firstRSOrder, appId, productId, storage.rsMatrix, storage.cMatrix, storage.countryCodes))
+				if (! await sendPriceAndTrial(firstRSOrder, appId, productId, storage.rsMatrix, storage.cMatrix, storage.countryCodes)){
+					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
+				}
+
+				argentea.planning.endIAP(firstRSOrder.bundle, true);
 			}
 		}
 		//Create the rest of IAPs
@@ -171,10 +191,12 @@ module.exports = {
 		}
 
 		function startPromise(order, appId, selectedFamilyId, storage){
-			return new Promise(async (resolve, reject)=>{
+			return new Promise(async (resolve)=>{
+				argentea.planning.beginIAP(order.bundle);
 				let template = await argentea.operations.requestIAPTemplate(order.bundle, appId);
 				if (!template){
-					resolve(false);//reject();
+					resolve(false);
+					argentea.planning.endIAP(order.bundle, false);
 					return false;
 				}
 
@@ -187,32 +209,36 @@ module.exports = {
 					tierStem: determineTier(order.type, order.price, storage.rsMatrix, storage.cMatrix),
 					priceTierEndDate: null,
 					priceTierEffectiveDate: null
-				}}]
+				}}];
 				template.versions[0].details.value = [buildEnUsVersion(order.version.name, order.version.desc)];
 				
 				if (order.type == "rs"){
 					template.pricingDurationType = {value: order.duration};
 				}
 
-				if (! await argentea.operations.createIAP(order.bundle, template, appId)){
-					resolve(false);//reject();
+				if (! await argentea.operations.createIAP(order.bundle, template, appId, overwriteAllowed)){
+					resolve(false);
+					argentea.planning.endIAP(order.bundle, false);
 					return false;
 				}
 
 				if (order.type == "rs"){
 					let productId = await argentea.operations.obtainProductId(order.bundle, appId);
 					if (!productId){
-						resolve(false);//reject();
+						resolve(false);
+						argentea.planning.endIAP(order.bundle, false);
 						return false;
 					}
 
 					if (! await sendPriceAndTrial(order, appId, productId, storage.rsMatrix, storage.cMatrix, storage.countryCodes)){
-						resolve(false);//reject();
+						resolve(false);
+						argentea.planning.endIAP(order.bundle, false);
 						return false;
 					}
 				}
 
 				resolve(true);
+				argentea.planning.endIAP(order.bundle, true);
 				return true;
 			});
 		}
