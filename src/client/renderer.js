@@ -251,7 +251,14 @@ function start(){
 		"Strelitzia",
 		"סטרליציה",
 		"Wishmaster"
-	]
+	];
+	let backs = [
+		"url(\"./backs/backS.jpg\")",
+		"url(\"./backs/backS2.jpg\")",
+		"url(\"./backs/backD.jpg\")",
+		"url(\"./backs/backA.jpg\")",
+		"url(\"./backs/backG.jpg\")",
+	];
 	document.getElementById("headerText").textContent = names[Math.floor(Math.random() * names.length)] + " " + remote.app.getVersion();
 	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
 	document.addEventListener("keydown", (e) => {
@@ -263,6 +270,8 @@ function start(){
 		if (e.key == "F12")
 			remote.getCurrentWindow().openDevTools();
 	});
+	
+	document.body.style.backgroundImage = backs[Math.floor(Math.random() * backs.length)];
 	sendStart();
 }
 
@@ -790,10 +799,10 @@ function downloadIAPs(){
 	status("Loading...")
 
 	sendCommand(message, (r)=>{
-		if (r.errorCount > 0) status("Failed to download " + r.errorCount + " IAPs");
+		//if (r.errorCount > 0) status("Failed to download " + r.errorCount + " IAPs");
 		//initTable("spreadsheet_edit", rsMatrix, cMatrix);
 		tables["spreadsheet_edit"].clear();
-		addOrders(tables["spreadsheet_edit"], r.data);
+		addOrders(tables["spreadsheet_edit"], r);
 	});
 
 	return false;

@@ -97,10 +97,33 @@ const IAP_TYPE_NAMES = {
 	"nc" : IAP_TYPE_NC
 }
 
-function progress(bundleName, task, status, message = null){
-	for (let item of mainProgressList){
+function progress(bundleName, operationId, status, message = null){
+	if (message == chlorophytum.BAD_APOL) status = PROGRESS_BADAPOL;
 
+	let target = null;
+	let targetId = (bundleName ? bundleName : "") + (operationId ? operationId : "");
+
+	for (let item of mainProgressList){
+		if (item.id == targetId){
+			target = item;
+			break;
+		}
+		for (let step of item.steps){
+			if (step.id == targetId){
+				target = step;
+				break;
+			}
+		}
 	}
+
+	if (!target){
+		console.log("Changing progress on unplanned step");
+		return;
+	}
+
+	target.status = status;
+	target.message = message;
+
 	onProgressChange(mainProgressList);
 }
 
@@ -251,15 +274,15 @@ module.exports = {
 				return false;
 			}
 		},
-		createTrial: async (bundleName, trialDuration, appId, productId)=>{
+		createTrial: async (bundleName, trialDuration, appId, productId, countryCodes)=>{
 			progress(bundleName, OPERATION_TRIAL, PROGRESS_INPROGRESS);
-			let trialRequest = buildTrialRequest(trialDuration, appId, productId);
+			let trialRequest = buildTrialRequest(trialDuration, appId, productId, countryCodes);
 			let trialResponse = await chlorophytum.sendTrialCreation(trialRequest);
 			if (trialResponse == "OK") {
 				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_OK);
 			} else {
-				let message = reportErrorsIfAny(requestErrors, order.bundle);
-				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL, message);
+				//let message = reportErrorsIfAny(requestErrors, order.bundle);
+				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL);
 			}
 		},
 		selectFamily: async (appId, repeated, defaultFamilyName)=>{
@@ -310,10 +333,13 @@ module.exports = {
 		requestIAPTemplate: async (bundleName, appId)=>{
 			progress(bundleName, OPERATION_TEMPLATE, PROGRESS_INPROGRESS);
 			let templateResponse = await chlorophytum.sendTemplateRequest(appId, IAP_TYPE_NAMES[order.type]);
-			sendProgressData({
-				id: order.bundle + ".template",
-				status: "done_ok"
-			});
+			if (templateResponse && templateResponse.data){
+				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_OK);
+				return templateResponse.data;
+			} else {
+				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL);
+				return null;
+			}
 		},
 		createFamily: async (bundleName, filledTemplate, appId)=>{
 			progress(bundleName, OPERATION_CREATE, PROGRESS_INPROGRESS);
@@ -588,7 +614,7 @@ function buildSubscriptionPricing(equalizedTierMap, countryCodes){
 	return data;
 }
 
-function buildTrialRequest(trialDuration, appId, productId){
+function buildTrialRequest(trialDuration, appId, productId, countryCodes){
 	function pad(num, size) {
 		let s = "00" + num;
 		return s.substr(s.length - size);
@@ -605,7 +631,7 @@ function buildTrialRequest(trialDuration, appId, productId){
 			}
 		}]
 	}
-	for (let code of storage.countryCodes){
+	for (let code of countryCodes){
 		let entry = {
 			errorKeys: null,
 			isEditable: true,

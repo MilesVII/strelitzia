@@ -367,6 +367,7 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, retryI
 					checkForErrors(responseBody);
 					resolve("MALFORMED REQUEST");
 					break;
+				case (500):
 				case (502):
 				case (503):
 				case (504):
@@ -375,6 +376,7 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, retryI
 					//console.log(responseBody);
 					requestErrors[retryIndex] = [BAD_APOL]
 					resolve(null);
+					break;
 				default:
 					console.log(`Unknown status: ${res.statusCode} at ${endpoint}`);
 					resolve(responseBody);

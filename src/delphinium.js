@@ -89,7 +89,7 @@ module.exports = {
 		];
 		return await Promise.all(promises);
 	},
-	downloadIAPs: async (appId)=>{
+	downloadIAPs: async (appId, storage)=>{
 		let iaps = await argentea.listIAPs(appId);
 		if (!iaps) return null;
 
@@ -99,15 +99,19 @@ module.exports = {
 		for (let iap of iaps){
 			dontMakeNoPromises.push(argentea.downloadIAP(appId, iap.adamId));
 		}
-		yourBodyCantKeep = await Promise.all(dontMakeNoPromises);
+		yourBodyCantKeep = await Promise.allSettled(dontMakeNoPromises);
+		results = [];
 		for (let raw of yourBodyCantKeep){
-			parseIAP(raw);
+			if (raw.value) raw = raw.value;
+			let parsed = parseIAP(raw, storage.rsMatrix, storage.cMatrix);
+			if (parsed) results.push(parsed);
 		}
 
-		return null;
+		return results;
 	},
-	createIAPs: async (orders, appId, storage, sequentialMode)=>{
+	createIAPs: async (orders, appId, storage, progressCallback, sequentialMode)=>{
 		argentea.planning.resetProgressList();
+		argentea.planning.setProgressCallback(progressCallback);
 
 		let firstRSOrder = getFirstRSOrder(orders);
 		let firstRSOrderCreated = false;
@@ -165,18 +169,16 @@ module.exports = {
 			if (firstRSOrderCreated && order == firstRSOrder) continue;
 			argentea.planning.planIAPCreation(order);
 		}
-		let promises = [];
-		for (order of orders){
-			if (firstRSOrderCreated && order == firstRSOrder) continue;
-			
-			promises.push(new Promise(async (resolve, reject)=>{
-				let tempalte = await argentea.operations.requestIAPTemplate(order.bundle, appId);
+
+		function startPromise(order, appId, selectedFamilyId, storage){
+			return new Promise(async (resolve, reject)=>{
+				let template = await argentea.operations.requestIAPTemplate(order.bundle, appId);
 				if (!template){
-					reject();
+					resolve(false);//reject();
 					return false;
 				}
 
-				template.familyId = selectedFamily.id;
+				template.familyId = selectedFamilyId;
 				template.productId = {value: order.bundle};
 				template.referenceName = {value: order.refname};
 				template.clearedForSale = {value: true};
@@ -193,32 +195,39 @@ module.exports = {
 				}
 
 				if (! await argentea.operations.createIAP(order.bundle, template, appId)){
-					reject();
+					resolve(false);//reject();
 					return false;
 				}
 
 				if (order.type == "rs"){
 					let productId = await argentea.operations.obtainProductId(order.bundle, appId);
 					if (!productId){
-						reject();
+						resolve(false);//reject();
 						return false;
 					}
 
 					if (! await sendPriceAndTrial(order, appId, productId, storage.rsMatrix, storage.cMatrix, storage.countryCodes)){
-						reject();
+						resolve(false);//reject();
 						return false;
 					}
 				}
 
-				resolve();
+				resolve(true);
 				return true;
-			}));
+			});
 		}
+
 		if (sequentialMode){
-			for (let promise of promises){
-				await promise;
+			for (order of orders){
+				if (firstRSOrderCreated && order == firstRSOrder) continue;
+				await startPromise(order, appId, selectedFamily.id, storage);
 			}
 		} else {
+			let promises = [];
+			for (order of orders){
+				if (firstRSOrderCreated && order == firstRSOrder) continue;
+				promises.push(startPromise(order, appId, selectedFamily.id, storage));
+			}
 			await Promise.all(promises);
 		}
 		return true;
@@ -226,7 +235,7 @@ module.exports = {
 }
 
 function getFirstRSOrder(orders){
-	for (let order of rders)
+	for (let order of orders)
 		if (order.type == "rs") 
 			return order;
 	return null;
@@ -248,7 +257,7 @@ async function sendPriceAndTrial(order, appId, productId, rsMatrix, cMatrix, cou
 		return false;
 	
 	if (order.trial != "off"){
-		if (! await argentea.operations.createTrial(order.bundle, order.trial, appId, productId))
+		if (! await argentea.operations.createTrial(order.bundle, order.trial, appId, productId, countryCodes))
 			return false;
 	}
 	return true;
@@ -331,7 +340,7 @@ function parseIAP(raw, rsMatrix, cMatrix){
 	}
 	switch (result.type){
 		case ("rs"): {
-			result.duration = pricingDurationType.value;
+			result.duration = raw.pricingDurationType.value;
 			result.trial = findTrial(raw.appliedPricingData.introOffers, "US");
 			result.price = findRSPrice(raw.appliedPricingData.subscriptions, "US");
 			break;

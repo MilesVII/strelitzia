@@ -162,35 +162,6 @@ const IAP_TYPE_NAMES = {
 	"nc" : IAP_TYPE_NC
 }
 
-let mainProgressList = [];
-function setMainProgressList(list){
-	mainProgressList = list;
-}
-function sendProgressData(data){
-	if (data.message == chlorophytum.BAD_APOL) data.status = "done_badapol";
-
-	let target = null;
-	for (let item of mainProgressList){
-		if (target) break;
-		if (item.id == data.id){
-			target = item;
-			break;
-		}
-		for (let step of item.steps){
-			if (step.id == data.id){
-				target = step;
-				break;
-			}
-		}
-	}
-	if (!target){
-		console.log("failed")
-	}
-
-	target.status = data.status;
-	target.message = data.message;
-	mainWindow.webContents.send("progressUpdate", mainProgressList);
-}
 function sendStatusUpdate(message){
 	mainWindow.webContents.send("statusUpdate", message);
 }
@@ -266,7 +237,7 @@ async function respondToCommand(command){
 		}
 	}
 	case ("LOGIN"): {
-		let loginResponse = await delphinium.login(command.options.login, command.options.password);// chlorophytum.sendLogin(command.options.login, command.options.password);
+		let loginResponse = await delphinium.login(command.options.login, command.options.password);
 
 		switch (loginResponse){
 			case ("CODE"): {
@@ -362,7 +333,7 @@ async function respondToCommand(command){
 		}
 
 		sendStatusUpdate("Downloading IAPs");
-		let result = await delphinium.downloadIAPs(command.options.appId);
+		let result = await delphinium.downloadIAPs(command.options.appId, storage);
 		if (result){
 			sendStatusUpdate("Downloaded");
 			return result;
@@ -378,7 +349,10 @@ async function respondToCommand(command){
 			return response;
 		}
 
-		return delphinium.createIAPs(command.options.orders, command.options.appId, storage, false);
+		let progressUpdate = (progressList)=>{
+			mainWindow.webContents.send("progressUpdate", progressList);
+		}
+		return delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, true);
 	}
 	/*scase ("EDIT_IAP"): {
 		// command.options.orders
@@ -419,10 +393,4 @@ async function respondToCommand(command){
 		response.message = "Unknown command";
 		return(response);
 	}
-}
-
-function setServiceKey(rawdata){
-	let j = JSON.parse(rawdata);
-	storage["serviceKey"] = j.authServiceKey;
-	saveStorage();
 }
