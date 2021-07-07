@@ -352,7 +352,7 @@ async function respondToCommand(command){
 		let progressUpdate = (progressList)=>{
 			mainWindow.webContents.send("progressUpdate", progressList);
 		}
-		await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, coomand.options.overwriteAllowed, command.options.sequentialMode);
+		await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
 
 		response.code = RESPONSE_CODES.OK;
 		return response;

@@ -669,6 +669,11 @@ function listApps(){
 				status(r);
 		}
 	});
+
+	for (let r of document.getElementsByClassName("xradio")){
+		r.className = "xradio";
+	}
+	document.getElementById("dialog_create_confirmer").disabled = false;
 	
 	return false;
 }

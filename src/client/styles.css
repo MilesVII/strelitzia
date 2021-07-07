@@ -88,7 +88,7 @@ table, tr, th {
 	margin: 0 0 10px 0;
 	padding: 20px;
 	background-color: rgba(255, 177, 131, .4);
-	background-color: rgba(240, 240, 240, .6);
+	background-color: rgba(240, 240, 240, .72);
 	backdrop-filter: blur(5px);
 	border-radius: 3px;
 }
@@ -105,8 +105,26 @@ input[type="text"], input[type="password"] {
 	font-size: 17pt;
 }
 
-input[type="file"] {
+input[type="file"], input[type=checkbox] {
 	display: none;
+}
+
+input[type=checkbox] + label {
+	display: block;
+	cursor: pointer;
+	background-color: rgba(0, 0, 0, .60);
+	margin: auto;
+	margin-top: 2px;
+	border: 0;
+	padding: 5px;
+	width: 50%;
+}
+input[type=checkbox]:checked + label {
+	/*color: rgb(0, 255, 153);*/
+	color: rgb(255, 102, 0);
+}
+input[type=checkbox]:not(:checked) + label {
+	color: rgba(255, 255, 255, .5);
 }
 
 .shortinput {
@@ -146,6 +164,7 @@ input[type="file"] {
 	text-decoration: none;
 	cursor: pointer;
 	display: block;
+	border-radius: 3px;
 }
 
 .xbutton:hover, input[type="submit"]:hover{
@@ -180,11 +199,12 @@ input[type="file"] {
 .dropdown-content {
 	display: none;
 	position: absolute;
-	background-color: rgba(220, 220, 220, .7);
+	background-color: rgba(220, 220, 220, .64);
 	min-width: 160px;
 	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-	z-index: 1;
+	z-index: 10;
 	cursor: pointer;
+	border-radius: 3px;
 }
 
 .dropdown-content a {
@@ -200,7 +220,7 @@ input[type="file"] {
 
 .modal {
 	position: fixed;
-	z-index: 1;
+	z-index: 5;
 	padding-top: 100px;
 	left: 0;
 	top: 0;
@@ -239,7 +259,7 @@ input[type="file"] {
 	width: 70%;
 	height: 42px;
 	background: #333;
-	border-radius: 7px;
+	border-radius: 3px;
 	outline: none;
 }
 
@@ -251,7 +271,7 @@ input[type="file"] {
 	background: url("./confirm.png");
 	background-size: cover;
 	background-position: center;
-	border-radius: 7px;
+	border-radius: 3px;
 	cursor: pointer;
 }
   
@@ -261,7 +281,7 @@ input[type="file"] {
 	background: url("./confirm.png");
 	background-size: cover;
 	background-position: center;
-	border-radius: 7px;
+	border-radius: 3px;
 	cursor: pointer;
 }
 
@@ -271,8 +291,8 @@ input[type="file"] {
 	background-position: center;
 }
 
-.easterSlider::-moz-range-thumb {
+/*.easterSlider::-moz-range-thumb {
 	background: url("http://n6.femjoy.com/free/16864111_gur063_ahq233/pics/014.jpg");
 	background-size: cover;
 	background-position: center;
-}
+}*/

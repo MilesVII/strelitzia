@@ -64,7 +64,6 @@
 			<div class="dialog" id="dialog_code">
 				<form onsubmit="return sendCode();">
 					<input type="text" id="dialog_code_code" class="longinput" name="Code" minlength=6 maxlength=6 pattern="[0-9]*" placeholder="6-digit code" required><br>
-					<!--<input type="submit" value="Send code"></input>-->
 				</form> 
 				<div class="xbutton" onclick="sendCode()">Send code</div>
 				<div class="xbutton" id="backToLogin" onclick="relogin()">Request another code</div>
@@ -74,8 +73,6 @@
 			<div class="dialog" id="dialog_main">
 				<div id="dialog_main_appname"></div>
 				<div class="xbutton" onclick="listApps()">Back to app list</div>
-				<!--<div class="xbutton" id="dialog_main_button_create" onclick="createIAPs();">Start IAP creation</div>-->
-				<!--<div class="xbutton" id="dialog_main_button_recreate" onclick="recreateIAPs();">Start recreating</div>-->
 				<div class="xradio_host" id="mode" onclick="switchMode(event)">
 					<div class="xradio" id="xr_create">Create</div><div class="xradio" id="xr_edit">Edit</div>
 				</div>
@@ -91,10 +88,10 @@
 					<input type="checkbox" id="dialog_create_sequential" checked>
 					<label for="dialog_create_sequential">Create IAPs sequentially (safer)</label>
 				</div>
+				<div id="spreadsheet_create" style="font-size: 10pt;"></div>
 				<div class="slidecontainer">
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_create_confirmer" oninput="refreshCreateConfirmer(this)" onmouseup="resetCreateConfirmer(this)">
 				</div>
-				<div id="spreadsheet_create" style="font-size: 10pt;"></div>
 			</div>
 			<div class="dialog" id="dialog_sheet_edit">
 				<div class="xbutton" id="dialog_button_download" onclick="downloadIAPs();">Download existing IAPs</div>
