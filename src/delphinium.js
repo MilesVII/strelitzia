@@ -118,20 +118,20 @@ module.exports = {
 		let selectedFamily;
 		if (firstRSOrder){
 			argentea.planning.planFamilyCheck();
-			selectedFamily = await argentea.operations.selectFamily(appId, false, DEFAULT_FAMILY_NAME);
+			selectedFamily = await argentea.operations.selectFamily(null, appId, false, DEFAULT_FAMILY_NAME);
 			if (!selectedFamily)
 				return false;
 			
 			if (DEBUG_FAMILY_BYPASS){ 
 				selectedFamily = {
-					name: DEFAULT_FAMILY_NAME + Math.floor(Math.random(10000)),
+					name: DEFAULT_FAMILY_NAME + Math.floor(Math.random() * 10000),
 					id: null
 				};
 			}
 			
 			if (!selectedFamily.id){
 				//Create family by completing first RS order 
-				argentea.planning.planFamilyCreation();
+				argentea.planning.planFamilyCreation(firstRSOrder);
 				argentea.planning.beginIAP(firstRSOrder.bundle);
 
 				let template = await argentea.operations.requestFamilyTemplate(firstRSOrder.bundle, appId);
@@ -146,13 +146,13 @@ module.exports = {
 				template.name = {value: selectedFamily.name};
 				template.details.value = [];
 
-				if (! await argentea.operations.createFamily(firstRSOrder.bundle, tempalte, appId)){
+				if (! await argentea.operations.createFamily(firstRSOrder.bundle, template, appId)){
 					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
 				}
 				firstRSOrderCreated = true;
 				
-				selectedFamily = await argentea.operations.selectFamily(appId, true, selectedFamily.name);
+				selectedFamily = await argentea.operations.selectFamily(firstRSOrder.bundle, appId, true, selectedFamily.name);
 				if (!(selectedFamily && selectedFamily.id)){
 					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
@@ -170,7 +170,7 @@ module.exports = {
 					return false;
 				}
 				productDetails.versions[0].details.value = [buildEnUsVersion(firstRSOrder.version.name, firstRSOrder.version.desc)];
-				productDetails.pricingDurationType = {value: order.duration};
+				productDetails.pricingDurationType = {value: firstRSOrder.duration};
 				if (! await argentea.operations.updateIAPDetails(firstRSOrder.bundle, productDetails, appId, productId)){
 					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;

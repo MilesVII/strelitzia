@@ -315,16 +315,18 @@ module.exports = {
 			let trialResponse = await chlorophytum.sendTrialCreation(trialRequest);
 			if (trialResponse == "OK") {
 				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_OK);
+				return true;
 			} else {
 				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				return false;
 			}
 		},
-		selectFamily: async (appId, repeated, defaultFamilyName)=>{
+		selectFamily: async (bundleName, appId, repeated, defaultFamilyName)=>{
 			let operationId = repeated ? OPERATION_REGFAMILY : OPERATION_FAMILIES;
-			progress(null, operationId, PROGRESS_INPROGRESS);
+			progress(bundleName, operationId, PROGRESS_INPROGRESS);
 			let familiesResponse = await chlorophytum.sendFamiliesRequest(appId);
 			if (familiesResponse && familiesResponse.data){
-				progress(null, operationId, PROGRESS_DONE_OK);
+				progress(bundleName, operationId, PROGRESS_DONE_OK);
 				let selectedFamily;
 				try {
 					if (familiesResponse.data.length >= 1){
@@ -333,23 +335,23 @@ module.exports = {
 							id:   familiesResponse.data[0].id
 						};
 						let message = "Detected existing family. Using \"" + selectedFamily.name + "\"";
-						progress(null, operationId, PROGRESS_DONE_OK, message);
+						progress(bundleName, operationId, PROGRESS_DONE_OK, message);
 					} else {
 						selectedFamily = {
 							name: defaultFamilyName,
 							id:   null
 						};
 						let message = "No families detected, will create a new one with name \"" + defaultFamilyName + "\"";
-						progress(null, operationId, PROGRESS_DONE_WARNING, message);
+						progress(bundleName, operationId, PROGRESS_DONE_WARNING, message);
 					}
 					return selectedFamily;
 				} catch(e){
 					let message = "Failed to read existing families";
-					progress(null, operationId, PROGRESS_DONE_FAIL, message);
+					progress(bundleName, operationId, PROGRESS_DONE_FAIL, message);
 					return null;
 				}
 			} else {
-				progress(null, operationId, PROGRESS_DONE_FAIL);
+				progress(bundleName, operationId, PROGRESS_DONE_FAIL);
 				return null;
 			}
 		},
