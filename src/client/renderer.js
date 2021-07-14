@@ -256,10 +256,13 @@ function start(){
 	];
 	let backs = [
 		"url(\"./backs/backS.jpg\")",
+		"url(\"./backs/backS.jpg\")",
+		"url(\"./backs/backS2.jpg\")",
 		"url(\"./backs/backS2.jpg\")",
 		"url(\"./backs/backD.jpg\")",
 		"url(\"./backs/backA.jpg\")",
 		"url(\"./backs/backG.jpg\")",
+		"url(\"./backs/backС.jpg\")"
 	];
 	document.getElementById("headerText").textContent = names[Math.floor(Math.random() * names.length)] + " " + remote.app.getVersion();
 	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
@@ -328,7 +331,7 @@ function isValid(order, appBundle){
 		return false;
 	}
 	
-	if (order.refname.length < 2){
+	if (!order.refname || order.refname.length < 2){
 		showModal("Reference name is too short for " + order.bundle);
 		return false;
 	}
@@ -363,11 +366,12 @@ function isValid(order, appBundle){
 	return true;
 }
 
-function collectOrders(sheet, appBundle){
+function collectOrders(sheet, appBundle, forEditing = true){
 	let source = sheet.getData();
 	let harvested = [];
 	for (let row of source){
-		if (!row[0]) continue;
+		if (!row[2]) continue;
+
 		let productId = row[2];
 		if (!productId.startsWith(appBundle)){
 			if (productId.startsWith("."))
@@ -375,7 +379,7 @@ function collectOrders(sheet, appBundle){
 			else {
 				if (productId.startsWith("com.")){
 					showModal(productId + " does not start with app bundle name");
-					return [];
+					return null;
 				}
 				productId = appBundle + "." + productId;
 			}
@@ -398,10 +402,10 @@ function collectOrders(sheet, appBundle){
 		} else {
 			entry.price    = row[4];
 		}
-		if (isValid(entry, appBundle))
+		if (!forEditing || isValid(entry, appBundle))
 			harvested.push(entry);
 		else {
-			return [];
+			return null;
 		}
 	}
 	return harvested;
@@ -747,7 +751,7 @@ function editIAPs(){
 	
 	let message = COMMANDS.edit;
 	message.options.appId = selectedApp.id;
-	message.options.orders = collectOrders(tables["spreadsheet_edit"], selectedApp.bundle);
+	message.options.orders = collectOrders(tables["spreadsheet_edit"], selectedApp.bundle, false);
 
 	let button = document.getElementById("dialog_edit_confirmer");
 

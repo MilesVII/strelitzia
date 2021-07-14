@@ -298,9 +298,10 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const RETRY_DELAY_MS_MIN = 300;
-const RETRY_DELAY_MS_SPREAD = 420;
+const RETRY_DELAY_MS_MIN = 1200;
+const RETRY_DELAY_MS_SPREAD = 4200;
 const RETRIES = 3;
+const REQUEST_TIMEOUT = 10000;
 async function genericRequest(method, data, endpoint, endpointParameters, jsonExpected = false, tries = RETRIES){
 	while (tries){
 		await sleep(RETRY_DELAY_MS_MIN + RETRY_DELAY_MS_SPREAD * Math.random())
@@ -331,7 +332,8 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, retryI
 	return new Promise(resolve => {
 		const options = {
 			method: method,
-			headers: formHeader((method == "GET") ? 0 : data.length)
+			headers: formHeader((method == "GET") ? 0 : data.length),
+			timeout: REQUEST_TIMEOUT
 		}
 		
 		let requestTarget;
@@ -413,11 +415,21 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, retryI
 			});
 		});
 
+		req.on('timeout', () => {
+			console.log("Timeout happened on " + endpoint);
+			req.destroy();
+			requestErrors[retryIndex] = [BAD_APOL, "Timeout: " + (REQUEST_TIMEOUT / 1000) + "s"];
+			resolve(null);
+		});
+
 		req.on('error', error => {
-			console.error(error);
-		})
+			console.error("Error happened on " + error);
+			requestErrors[retryIndex] = [BAD_APOL, error];
+			resolve(null);
+		});
 
 		if (data) req.write(data);
+
 		req.end();
 	});
 }

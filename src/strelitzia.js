@@ -108,26 +108,30 @@ function saveStorage(){
 	fs.writeFileSync(CWD + "/storage.json", s);
 }
 
+function setServiceKey(){
+	delphinium.requestServiceKey().then((key)=>{
+		if (key && key.authServiceKey){
+			storage.serviceKey = key.authServiceKey;
+			saveStorage();
+		} else {
+			//TODO: Crash the app if failed to acquire service key
+		}
+	});
+}
+
 function start(){
 	loadStorage();
 
 	chlorophytum.setStorage(storage, saveStorage);
 
 	if (!storage.serviceKey){
-		delphinium.requestServiceKey().then((key)=>{
-			if (key && key.authServiceKey){
-				storage.serviceKey = key.authServiceKey;
-				saveStorage();
-			} else {
-				//TODO: Crash the app if failed to acquire service key
-			}
-		});
+		setServiceKey();
 	}
 
-	let path = process.execPath;
-	path = path.substring(0, path.lastIndexOf("/") + 1);
+	//let path = process.execPath;
+	//path = path.substring(0, path.lastIndexOf("/") + 1);
 
-	console.log("Current path " + process.cwd());
+	//console.log("Current path " + process.cwd());
 }
 
 ipcMain.on('strelitziaCommand', async (event, command) => {
@@ -190,22 +194,18 @@ async function respondToCommand(command){
 					error: "Authorize and select any app to download pricing matrixes"
 				};
 			}
-			break;
 		}
 		case ("SIGNOUT"): {
 			delete storage.cookies;
 			delete storage.team;
 			saveStorage();
 			return("OK");
-			break;
 		}
 		case ("RESET"): {
 			storage = {};
 			saveStorage();
-			let key = await chlorophytum.sendServiceKeyRequest();
-			setServiceKey(key);
+			setServiceKey();
 			return("OK");
-			break;
 		}
 		}
 		break;
@@ -300,7 +300,7 @@ async function respondToCommand(command){
 	case ("SEL_APP"): {
 		if (!storage.rsMatrix || !storage.cMatrix || !storage.countryCodes){
 			sendStatusUpdate("Downloading matrices");
-			matrices = await delphinium.downloadMatrices(appId);
+			matrices = await delphinium.downloadMatrices(command.options.appId);
 			if (matrices[0]){
 				storage.rsMatrix = matrices[0];
 			}
@@ -357,40 +357,23 @@ async function respondToCommand(command){
 		response.code = RESPONSE_CODES.OK;
 		return response;
 	}
-	/*scase ("EDIT_IAP"): {
-		// command.options.orders
-		// command.options.appId
+	case ("EDIT_IAP"): {
+		let session = await delphinium.checkSession();
+		if (!session){
+			response.code = RESPONSE_CODES.AUTH;
+			return response;
+		}
+
+		let progressUpdate = (progressList)=>{
+			mainWindow.webContents.send("progressUpdate", progressList);
+		}
+
+		await delphinium.editIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.sequentialMode);
+		//await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
+
 		response.code = RESPONSE_CODES.OK;
 		return response;
 	}
-	case ("RECREATE"): {
-		//let found = await obtainFreshPurchase(command.options.appId, order.bundle, 7);
-		let iapsResponse = await chlorophytum.sendIAPsRequest(command.options.appId);
-
-		let iapsParsed = JSON.parse(iapsResponse).data;
-		for (let i of iapsParsed){
-			//i.iTunesConnectStatus == 
-			console.log(i.versions[i.versions.length - 1].itunesConnectStatus);
-			continue;
-
-			let detailsResponse = await chlorophytum.sendIAPDetailsRequest(command.options.appId, i.adamId);
-			let product = JSON.parse(detailsResponse).data;
-			let lc = product.versions[0].details.value[0].value.localeCode;
-			if (lc == "en-US"){
-				product.versions[0].details.value[0].value.localeCode = "en-CA";
-			} else {
-				product.versions[0].details.value[0].value.localeCode = "en-US";
-			}
-			
-			let editResponse = await chlorophytum.sendIAPDetailsRefresh(freshProduct, command.options.appId, found.adamId);
-			if (editResponse == "OK")
-				console.log(product.productId.value + ": Product locale edited");
-			else
-				console.log(product.productId.value + ": Failed to edit product locale");
-		}
-		response.code = RESPONSE_CODES.OK;
-		return (response);
-	}*/
 	default:
 		response.code = RESPONSE_CODES.ERROR;
 		response.message = "Unknown command";

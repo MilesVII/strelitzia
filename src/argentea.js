@@ -97,37 +97,19 @@ const IAP_TYPE_NAMES = {
 	"nc" : IAP_TYPE_NC
 }
 
-function progress(bundleName, operationId, status, message = null){
-	if (message == chlorophytum.BAD_APOL) status = PROGRESS_BADAPOL;
-
-	let target = null;
-	let targetId = (bundleName ? bundleName : "") + (operationId ? operationId : "");
-
-	for (let item of mainProgressList){
-		if (item.id == targetId){
-			target = item;
-			break;
-		}
-		for (let step of item.steps){
-			if (step.id == targetId){
-				target = step;
-				break;
-			}
-		}
-	}
-
-	if (!target){
-		console.log("Changing progress on unplanned step");
-		return;
-	}
-
-	target.status = status;
-	target.message = message;
-
-	onProgressChange(mainProgressList);
+const IAP_TYPE_NAMES_REVERSED = {
+	"consumable"    : "c",
+	"nonConsumable" : "nc",
+	"recurring"     : "rs"
 }
 
 module.exports = {
+	toInternalIAPType: (appStoreType)=>{
+		return IAP_TYPE_NAMES_REVERSED[IAP_TYPE_NAMES[appStoreType]];
+	},
+	toAppStoreIAPType: (internalType)=>{
+		return IAP_TYPE_NAMES[internalType];
+	},
 	planning: {
 		resetProgressList: ()=>{
 			mainProgressList = [];
@@ -228,7 +210,7 @@ module.exports = {
 					status: PROGRESS_INITIAL
 				});
 				t.steps.push({
-					name: "Equalize prices",
+					name: "Equalize price",
 					id: order.bundle + OPERATION_EQUALIZE,
 					status: PROGRESS_INITIAL
 				});
@@ -245,6 +227,53 @@ module.exports = {
 					});
 				}
 			}
+
+			mainProgressList.push(t);
+		},
+		planEditing: (order)=>{
+			let t = {
+				name: "IAP " + order.bundle,
+				id: order.bundle,
+				steps: [
+					{
+						name: "Obtain IAP id",
+						id: order.bundle + OPERATION_OBTAINID,
+						status: PROGRESS_INITIAL
+					},
+					{
+						name: "Load IAP data",
+						id: order.bundle + OPERATION_DETAILS,
+						status: PROGRESS_INITIAL
+					}
+				],
+				status: PROGRESS_INITIAL
+			};
+		
+			if (order.type == "rs"){
+				t.steps.push({
+					name: "Equalize price",
+					id: order.bundle + OPERATION_EQUALIZE,
+					status: PROGRESS_INITIAL
+				});
+				t.steps.push({
+					name: "Set price",
+					id: order.bundle + OPERATION_PRICE,
+					status: PROGRESS_INITIAL
+				});
+				if (order.trial != "off"){
+					t.steps.push({
+						name: "Do nuffing while trying to add trial",
+						id: order.bundle + OPERATION_TRIAL,
+						status: PROGRESS_INITIAL
+					});
+				}
+			}
+
+			t.steps.push({
+				name: "Save changes",
+				id: order.bundle + OPERATION_UPDATEIAP,
+				status: PROGRESS_INITIAL
+			});
 
 			mainProgressList.push(t);
 		},
@@ -562,6 +591,36 @@ module.exports = {
 		return null;
 	}
 };
+
+function progress(bundleName, operationId, status, message = null){
+	if (message == chlorophytum.BAD_APOL) status = PROGRESS_BADAPOL;
+
+	let target = null;
+	let targetId = (bundleName ? bundleName : "") + (operationId ? operationId : "");
+
+	for (let item of mainProgressList){
+		if (item.id == targetId){
+			target = item;
+			break;
+		}
+		for (let step of item.steps){
+			if (step.id == targetId){
+				target = step;
+				break;
+			}
+		}
+	}
+
+	if (!target){
+		console.log("Changing progress on unplanned step");
+		return;
+	}
+
+	target.status = status;
+	target.message = message;
+
+	onProgressChange(mainProgressList);
+}
 
 async function requestIAP(appId, productId){
 	let detailsResponse = await chlorophytum.sendIAPDetailsRequest(appId, productId);

@@ -257,6 +257,51 @@ module.exports = {
 			await Promise.all(promises);
 		}
 		return true;
+	},
+	editIAPs: async (orders, appId, storage, progressCallback, sequentialMode)=>{
+		argentea.planning.resetProgressList();
+		argentea.planning.setProgressCallback(progressCallback);
+		for (let order of orders)
+			argentea.planning.planEditing(order);
+
+		for (let order of orders){
+			argentea.planning.beginIAP(order.bundle);
+			let productId = await argentea.operations.obtainProductId(order.bundle, appId, 2);
+
+			let productDetails = await argentea.operations.requestIAPDetails(order.bundle, appId, productId);
+			if (!productDetails){
+				argentea.planning.endIAP(order.bundle, false);
+				return false;
+			}
+
+			let type = order.type = argentea.toInternalIAPType(productDetails.addOnType);
+
+			if (order.price && order.price != ""){
+				if (type == "c" || type == "nc")
+					productDetails.pricingIntervals[0].value.tierStem = determineTier(type, order.price, storage.rsMatrix, storage.cMatrix);
+				else {
+					if (!order.trial || order.trial == "") order.trial = "off";
+					await sendPriceAndTrial(order, appId, productId, storage.rsMatrix, storage.cMatrix, storage.countryCodes);
+				}
+			}
+			if (type == "rs" && order.duration && order.duration != "")
+				productDetails.pricingDurationType.value = order.duration;
+			if (order.refname && order.refname != "")
+				productDetails.referenceName.value = order.refname;
+			if (order.version.name && order.version.name != "" &&
+			    order.version.desc && order.version.desc != "")
+				productDetails.versions[0].details.value = [buildEnUsVersion(order.version.name, order.version.desc)];
+			if (order.duration && order.duration != "")
+				productDetails.pricingDurationType = {value: order.duration};
+			
+			if (! await argentea.operations.updateIAPDetails(order.bundle, productDetails, appId, productId)){
+				argentea.planning.endIAP(order.bundle, false);
+				//return false;
+			}
+			argentea.planning.endIAP(order.bundle, true);
+		}
+
+		return true;
 	}
 }
 
@@ -298,12 +343,6 @@ function buildEnUsVersion(name, description){
 }
 
 function parseIAP(raw, rsMatrix, cMatrix){
-	const REVERSE_TYPE_MAP = {
-		"recurring": "rs",
-		"consumable" : "c",
-		"nonConsumable": "nc"
-	};
-	
 	function findRSPrice(from, country){
 		if (!from) return null;
 		let tier = null;
@@ -349,7 +388,7 @@ function parseIAP(raw, rsMatrix, cMatrix){
 
 	let result = {
 		adamId: raw.adamId,
-		type: REVERSE_TYPE_MAP[raw.addOnType],
+		type: argentea.toInternalIAPType(raw.addOnType),
 		refname: raw.referenceName.value,
 		bundle: raw.productId.value,
 		version: {

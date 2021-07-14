@@ -193,7 +193,7 @@ input[type=checkbox]:not(:checked) + label {
 
 .dropdown {
 	position: relative;
-	display: inline-block;
+	display: block;
 }
 
 .dropdown-content {
