@@ -695,6 +695,9 @@ function selectApp(app){
 			case(RESPONSE_CODES.OK):
 				startMainDialog(r.cMatrix, r.rsMatrix, app.bundle, app.id);
 				break;
+			case(RESPONSE_CODES.AUTH):
+				relogin();
+				break;
 			default:
 				status(r);
 		}
@@ -720,20 +723,19 @@ function createIAPs(overwriteAllowed, sequentialMode){
 	message.options.sequentialMode = sequentialMode;
 
 	let button = document.getElementById("dialog_create_confirmer");
-	//defaultButtonColor = button.style.backgroundColor;
-	//button.style.backgroundColor = "#FDD";
+	defaultButtonColor = button.style.backgroundColor;
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
 				status("Finished");
 				button.disabled = false;
-				button.style.backgroundColor = "#333";
+				button.style.backgroundColor = defaultButtonColor;
 				button.value = 0;
 				buttonsLocked = false;
 				break;
-			case(RESPONSE_CODES.ERROR):
-				status(r.message);
+			case(RESPONSE_CODES.AUTH):
+				relogin();
 				break;
 			default:
 				status(r);
@@ -763,6 +765,9 @@ function editIAPs(){
 				button.style.backgroundColor = "#333";
 				button.value = 0;
 				editButtonsLocked = false;
+				break;
+			case(RESPONSE_CODES.AUTH):
+				relogin();
 				break;
 			case(RESPONSE_CODES.ERROR):
 				status(r.message);

@@ -288,51 +288,51 @@ module.exports = {
 	operations: {
 		equalizeByUSD: async (bundleName, appId, productId, tier)=>{
 			progress(bundleName, OPERATION_EQUALIZE, PROGRESS_INPROGRESS);
-			let result = await chlorophytum.sendEqualizeByUSDRequest(appId, productId, tier);
-			if (result && result.data){
+			let response = await chlorophytum.sendEqualizeByUSDRequest(appId, productId, tier);
+			if (response.result && response.result.data){
 				progress(bundleName, OPERATION_EQUALIZE, PROGRESS_DONE_OK);
-				return result.data;
+				return response.result.data;
 			} else {
-				progress(bundleName, OPERATION_EQUALIZE, PROGRESS_BAD_APOL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_EQUALIZE, PROGRESS_BADAPOL, response.errors);
 				return null;
 			}
 		},
 		createRSPricing: async (bundleName, equalized, countryCodes, appId, productId)=>{
 			let pricing = buildSubscriptionPricing(equalized, countryCodes);
 			progress(bundleName, OPERATION_PRICE, PROGRESS_INPROGRESS);
-			let pricingResponse = await chlorophytum.sendRSPriceCreation(pricing, appId, productId);
-			if (pricingResponse == "OK"){
+			let response = await chlorophytum.sendRSPriceCreation(pricing, appId, productId);
+			if (response.result == "OK"){
 				progress(bundleName, OPERATION_PRICE, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_PRICE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_PRICE, PROGRESS_DONE_FAIL, response.errors);
 				return false;
 			}
 		},
 		createTrial: async (bundleName, trialDuration, appId, productId, countryCodes)=>{
 			progress(bundleName, OPERATION_TRIAL, PROGRESS_INPROGRESS);
 			let trialRequest = buildTrialRequest(trialDuration, appId, productId, countryCodes);
-			let trialResponse = await chlorophytum.sendTrialCreation(trialRequest);
-			if (trialResponse == "OK") {
+			let response = await chlorophytum.sendTrialCreation(trialRequest);
+			if (response.result == "OK") {
 				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_TRIAL, PROGRESS_DONE_FAIL, response.errors);
 				return false;
 			}
 		},
 		selectFamily: async (bundleName, appId, repeated, defaultFamilyName)=>{
 			let operationId = repeated ? OPERATION_REGFAMILY : OPERATION_FAMILIES;
 			progress(bundleName, operationId, PROGRESS_INPROGRESS);
-			let familiesResponse = await chlorophytum.sendFamiliesRequest(appId);
-			if (familiesResponse && familiesResponse.data){
+			let response = await chlorophytum.sendFamiliesRequest(appId);
+			if (response.result && response.result.data){
 				progress(bundleName, operationId, PROGRESS_DONE_OK);
 				let selectedFamily;
 				try {
-					if (familiesResponse.data.length >= 1){
+					if (response.result.data.length >= 1){
 						selectedFamily = {
-							name: familiesResponse.data[0].name.value,
-							id:   familiesResponse.data[0].id
+							name: response.result.data[0].name.value,
+							id:   response.result.data[0].id
 						};
 						let message = "Detected existing family. Using \"" + selectedFamily.name + "\"";
 						progress(bundleName, operationId, PROGRESS_DONE_OK, message);
@@ -351,41 +351,41 @@ module.exports = {
 					return null;
 				}
 			} else {
-				progress(bundleName, operationId, PROGRESS_DONE_FAIL);
+				progress(bundleName, operationId, PROGRESS_DONE_FAIL, response.errors);
 				return null;
 			}
 		},
 		requestFamilyTemplate: async (bundleName, appId)=>{
 			progress(bundleName, OPERATION_TEMPLATE, PROGRESS_INPROGRESS);
-			let templateResponse = await chlorophytum.sendFamilyTemplateRequest(appId);
-			if (templateResponse && templateResponse.data){
+			let response = await chlorophytum.sendFamilyTemplateRequest(appId);
+			if (response.result && response.result.data){
 				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_OK);
-				return templateResponse.data;
+				return response.result.data;
 			} else {
-				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL);
+				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL, response.errors);
 				return null;
 			}
 		},
 		requestIAPTemplate: async (bundleName, appId)=>{
 			progress(bundleName, OPERATION_TEMPLATE, PROGRESS_INPROGRESS);
-			let templateResponse = await chlorophytum.sendTemplateRequest(appId, IAP_TYPE_NAMES[order.type]);
-			if (templateResponse && templateResponse.data){
+			let response = await chlorophytum.sendTemplateRequest(appId, IAP_TYPE_NAMES[order.type]);
+			if (response.result && response.result.data){
 				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_OK);
-				return templateResponse.data;
+				return response.result.data;
 			} else {
-				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_TEMPLATE, PROGRESS_DONE_FAIL, response.errors);
 				return null;
 			}
 		},
 		createFamily: async (bundleName, filledTemplate, appId)=>{
 			progress(bundleName, OPERATION_CREATE, PROGRESS_INPROGRESS);
-			let createResponse = await chlorophytum.sendFamilyCreation(filledTemplate, appId);
+			let response = await chlorophytum.sendFamilyCreation(filledTemplate, appId);
 
-			if (createResponse == "OK"){
+			if (response.result == "OK"){
 				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL, response.errors);
 				return false;
 			}
 		},
@@ -394,10 +394,10 @@ module.exports = {
 			progress(bundleName, OPERATION_OBTAINID, PROGRESS_INPROGRESS);
 			while (tries > 0){
 				tries -= 1;
-				let iapsResponse = await chlorophytum.sendIAPsRequest(appId);
+				let response = await chlorophytum.sendIAPsRequest(appId);
 		
-				if (iapsResponse && iapsResponse.data){
-					for (let iap of iapsResponse.data)
+				if (response.result && response.result.data){
+					for (let iap of response.result.data)
 						if (iap.vendorId == bundleName){
 							progress(bundleName, OPERATION_OBTAINID, PROGRESS_DONE_OK);
 							return iap.adamId;
@@ -406,7 +406,7 @@ module.exports = {
 					message = "Retrying to obtain id of fresh product. Tries left: " + tries;
 					progress(bundleName, OPERATION_OBTAINID, PROGRESS_BADAPOL, message);
 				} else {
-					progress(bundleName, OPERATION_OBTAINID, PROGRESS_BADAPOL, chlorophytum.getLastErrors());
+					progress(bundleName, OPERATION_OBTAINID, PROGRESS_BADAPOL, response.errors);
 					continue;
 				}
 			}
@@ -421,51 +421,52 @@ module.exports = {
 				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_OK);
 				return detailsResponse;
 			} else {
-				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_FAIL, response.errors);
 				return null;
 			}
 		},
 		createIAP: async (bundleName, filledTemplate, appId, overwriteAllowed)=>{
 			progress(bundleName, OPERATION_CREATE, PROGRESS_INPROGRESS);
-			let createResponse = await chlorophytum.sendIAPCreation(filledTemplate, appId);
+			let response = await chlorophytum.sendIAPCreation(filledTemplate, appId);
 
-			if (createResponse == "OK"){
+			if (response.result == "OK"){
 				progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				if (overwriteAllowed && chlorophytum.isLastErrorIsAlreadyExistingError()){
-					progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_WARNING, chlorophytum.getLastErrors());
+				let alreadyExists = response.errors.includes("The product ID you entered has already been used");
+				if (overwriteAllowed && alreadyExists){
+					progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_WARNING, response.errors);
 					return true;
 				} else {
-					progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+					progress(bundleName, OPERATION_CREATE, PROGRESS_DONE_FAIL, response.errors);
 					return false;
 				}
 			}
 		},
 		updateIAPDetails: async (bundleName, filledDetails, appId, productId)=>{
 			progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_INPROGRESS);
-			baseResponse = await chlorophytum.sendIAPDetailsRefresh(filledDetails, appId, productId);
-			if (baseResponse == "OK") {
+			response = await chlorophytum.sendIAPDetailsRefresh(filledDetails, appId, productId);
+			if (response.result == "OK") {
 				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_OK);
 				return true;
 			} else {
-				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_FAIL, chlorophytum.getLastErrors());
+				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_FAIL, response.errors);
 				return false;
 			}
 		}
 	},
 	requestServiceKey: async()=>{
-		return await chlorophytum.sendServiceKeyRequest();
+		return (await chlorophytum.sendServiceKeyRequest()).result;
 	},
 	checkSession: async()=>{
-		let olympusResponse = await chlorophytum.sendToOlympus();
-		return olympusResponse != "AUTH";
+		let response = await chlorophytum.sendToOlympus();
+		return response.result != "AUTH";
 	},
 	listTeams: async ()=>{
-		let details = await chlorophytum.sendUserDetails();
-		if (details && details.data){
+		let response = await chlorophytum.sendUserDetails();
+		if (response.result && response.result.data){
 			let teamOptions = [];
-			for (let a of details.data.associatedAccounts){
+			for (let a of response.result.data.associatedAccounts){
 				let team = {
 					name: a.contentProvider.name,
 					id: a.contentProvider.contentProviderId
@@ -478,23 +479,18 @@ module.exports = {
 		}
 	},
 	login: async (login, password)=>{
-		return await chlorophytum.sendLogin(login, password);
+		return (await chlorophytum.sendLogin(login, password)).result;
 	},
 	sendCode: async (code)=>{
-		let codeResponse = await chlorophytum.sendCode(code);
-		return codeResponse == "OK";
-		if (codeResponse == "OK"){
-			return true;
-		} else { //TODO: Investigate response for wrong code
-			return false;
-		}
+		let response = await chlorophytum.sendCode(code);
+		return response.result == "OK";//TODO: Investigate response for wrong code
 	},
 	listApps: async ()=>{
 		let response = await chlorophytum.sendAppsRequest();
 
-		if (response && response.data){
+		if (response.result && response.result.data){
 			let apps = [];
-			for (let app of response.data.summaries){
+			for (let app of response.result.data.summaries){
 				apps.push({
 					id: app.adamId,
 					name: app.name,
@@ -509,32 +505,32 @@ module.exports = {
 	},
 
 	requestRSPricing: async (appId, productId)=>{
-		let pricing = await chlorophytum.sendRSPricingRequest(appId, productId);
-		if (pricing && pricing.data){
-			return pricing.data;
+		let response = await chlorophytum.sendRSPricingRequest(appId, productId);
+		if (response.result && response.result.data){
+			return response.result.data;
 		} else {
 			return null;
 		}
 	},
 	listIAPs: async (appId)=>{
-		let iapsResponse = await chlorophytum.sendIAPsRequest(appId);
+		let response = await chlorophytum.sendIAPsRequest(appId);
 
-		if (iapsResponse && iapsResponse.data){
-			return iapsResponse.data;
+		if (response.result && response.result.data){
+			return response.result.data;
 		} else {
 			return null;
 		}
 	},
 	downloadIAP: async (appId, productId)=>{
-		let detailsResponse = await requestIAP(appId, productId);
-		if (detailsResponse){
+		let response = await requestIAP(appId, productId);
+		if (response){
 			let pricing;
-			if (detailsResponse.addOnType == IAP_TYPE_RS){
+			if (response.addOnType == IAP_TYPE_RS){
 				pricing = await module.exports.requestRSPricing(appId, productId);
 			}
 			if (pricing)
-				detailsResponse.appliedPricingData = pricing;
-			return detailsResponse;
+				response.appliedPricingData = pricing;
+			return response;
 		} else {
 			return null;
 		}
@@ -542,7 +538,7 @@ module.exports = {
 
 	downloadRSMatrix: async (appId)=>{
 		let matrix = [];
-		let rawRSMatrix = await chlorophytum.sendRSMatrixRequest(appId);
+		let rawRSMatrix = (await chlorophytum.sendRSMatrixRequest(appId)).result;
 		if (rawRSMatrix && rawRSMatrix.data && rawRSMatrix.data.pricingTiers){
 			for (let tier of rawRSMatrix.data.pricingTiers){
 				for (let pricingInfo of tier.pricingInfo){
@@ -562,7 +558,7 @@ module.exports = {
 	},
 	downloadCMatrix: async (appId)=>{
 		let matrix = [];
-		let rawCMatrix = await chlorophytum.sendCMatrixRequest(appId);
+		let rawCMatrix = (await chlorophytum.sendCMatrixRequest(appId)).result;
 		if (rawCMatrix && rawCMatrix.data && rawCMatrix.data.pricingTiers){
 			for (let tier of rawCMatrix.data.pricingTiers){
 				for (let pricingInfo of tier.pricingInfo){
@@ -581,7 +577,7 @@ module.exports = {
 		return null;
 	},
 	downloadCountryCodes: async (appId)=>{
-		let ccResponse = await chlorophytum.sendCountriesRequest();
+		let ccResponse = (await chlorophytum.sendCountriesRequest()).result;
 		if (ccResponse && ccResponse.data){
 			let codes = [];
 
@@ -625,9 +621,9 @@ function progress(bundleName, operationId, status, message = null){
 }
 
 async function requestIAP(appId, productId){
-	let detailsResponse = await chlorophytum.sendIAPDetailsRequest(appId, productId);
-	if (detailsResponse && detailsResponse.data){
-		return detailsResponse.data;
+	let response = await chlorophytum.sendIAPDetailsRequest(appId, productId);
+	if (response.result && response.result.data){
+		return response.result.data;
 	} else {;
 		return null;
 	}

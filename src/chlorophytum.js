@@ -75,34 +75,6 @@ module.exports = {
 		saveStorage = saveCallback;
 	},
 
-	getLastErrors: ()=>{
-		let messages = [];
-		let counter = 0;
-		for (let e of requestErrors){
-			++counter;
-			if (e){
-				for (let m of e){
-					messages.push("Try #" + counter + ": " + m);
-				}
-			}
-		}
-		return messages.join("\n");
-	},
-
-	isLastErrorIsAlreadyExistingError: ()=>{
-		for (let t of requestErrors.slice().reverse()){
-			if (t){
-				for (let e of t){
-					if (e.includes("The product ID you entered has already been used")){
-						return true;
-					}
-				}
-				break;
-			}
-		}
-		return false;
-	},
-
 	sendServiceKeyRequest: ()=>{
 		return genericRequest(METHOD_GET, null, ENDPOINTS.serviceKey, null, JSON_EXPECTED);
 	},
@@ -294,29 +266,44 @@ function applyParametersToEndpoint(endpoint, parameters){
 	return e;
 }
 
+function errorsToString(requestErrors){
+	let messages = [];
+	let counter = 0;
+	for (let e of requestErrors){
+		++counter;
+		if (e){
+			for (let m of e){
+				messages.push("Try #" + counter + ": " + m);
+			}
+		}
+	}
+	return messages.join("\n");
+}
+
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 const RETRY_DELAY_MS_MIN = 1200;
 const RETRY_DELAY_MS_SPREAD = 4200;
-const RETRIES = 3;
+const RETRIES = 5;
 const REQUEST_TIMEOUT = 10000;
 async function genericRequest(method, data, endpoint, endpointParameters, jsonExpected = false, tries = RETRIES){
-	while (tries){
-		await sleep(RETRY_DELAY_MS_MIN + RETRY_DELAY_MS_SPREAD * Math.random())
+	let requestErrors = [];
+	while (tries > 0){
+		await sleep(RETRY_DELAY_MS_MIN + RETRY_DELAY_MS_SPREAD * Math.random());
 		--tries;
-		try {
-			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, RETRIES - (tries + 1), jsonExpected);
+		try { //Excessive, may be deleted
+			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, RETRIES - tries - 1);
 			if (response)
-				return response;
+				return {result: response, errors: errorsToString(requestErrors)};
 		} catch(e){}
+		await sleep(RETRY_DELAY_MS_MIN);
 	}
-	return null;
+	return {result: null, errors: errorsToString(requestErrors)};
 }
 
-let requestErrors = [];
-function unsafeGenericRequest(method, data, endpoint, endpointParameters, retryIndex, jsonExpected){
+function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, retryIndex){
 	function checkForErrors(body){
 		try {
 			let r = JSON.parse(body);
@@ -354,8 +341,6 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, retryI
 				data.push(chunk);
 			});
 			res.on('end', async () => {
-				requestErrors = [];
-
 				let responseBody = Buffer.concat(data).toString();
 				if (res.headers["content-encoding"] == "gzip"){
 					if (method != "POST")
