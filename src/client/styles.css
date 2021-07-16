@@ -97,6 +97,10 @@ table, tr, th {
 	display: none;
 }
 
+.marginedBlock {
+	margin-top:    20px;
+	margin-bottom: 20px;
+}
 
 input[type="text"], input[type="password"] {
 	margin-top: 1px;

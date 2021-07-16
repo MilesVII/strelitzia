@@ -1,3 +1,62 @@
+/*
+Genista.js
+
+Genista is UI renderer
+
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡠⠤⠐⠒⠈⠉⠉⠉⠉⠑⠒⠂⠤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⠁⢀⣠⠤⠔⠒⠒⠒⠒⠒⠶⠤⢤⣄⡀⠉⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣷⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⠿⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢨⢱⠀⠈⠢⢀⣰⣿⣿⡧⠤⠤⣤⣴⣶⣿⡿⠛⠁⠀⠏⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠉⠈⠉⠁⠀⠀⠈⠉⠉⠉⠀⠀⠀⢀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⢅⡀⠀⠀⣀⠄⠢⢀⣀⣀⡀⠐⠠⣀⠀⠀⢀⡨⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⡂⠁⠈⠀⠀⠀⠀⠀⠀⠀⠀⠃⠈⢒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠖⠙⠦⡀⡇⠀⡗⢤⡀⠀⠀⠀⠀⢀⠤⢲⠀⢸⢀⠴⠋⠢⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡴⠋⠀⠀⠀⠀⠈⠀⠀⡃⠀⠈⠓⠤⠤⠚⠁⠀⢸⠀⠸⠁⠀⠀⠀⠀⠱⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠑⠢⢤⣀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⢰⠉⠲⢄⡀⠀⠀⢀⡠⠖⠉⡆⠀⠀⠀⠀⠀⠀⣴⣶⠇⠀⠀⠀⠀⣀⡤⠔⠊⢣⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠋⠠⠊⠐⠢⠌⡙⢢⠀⠀⠀⡇⠀⠀⠀⠀⠀⢸⠀⢸⠀⠀⠀⠈⠑⠊⠁⠀⠀⠀⡇⠀⡆⠀⠀⠀⠀⣿⣿⠀⠀⠀⡔⢋⠡⠐⠀⣗⠀⠑⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⠁⡐⠁⠀⠀⠀⠀⠈⠑⢧⠀⠀⠣⣀⠀⠀⠀⠀⢸⠀⢸⣤⣤⣄⣀⣀⣠⣤⣤⣤⣤⡇⠀⡇⠀⢀⣤⣾⣿⠟⠀⠀⡜⠊⠀⠀⠀⠐⣿⣾⣆⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢨⠚⠀⠀⠀⠀⠀⠀⠀⠀⠈⣆⠀⠀⠈⠳⣄⠀⢠⣾⠀⢸⠯⠛⠛⠚⠛⠛⠛⠛⠛⠿⡃⠀⣧⣶⣿⣿⠟⠁⠀⠀⡰⠁⠀⠀⠀⠀⠀⠘⣿⣿⣶⡅⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡆⠀⠀⠀⠀⠑⠾⢻⠀⠰⠖⠒⣒⠒⠲⠖⢒⣒⠒⠲⠇⠀⡟⠿⠋⠀⠀⠀⠀⣰⠁⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⠿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠳⢄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠃⠀⠀⠀⠀⠀⢀⠜⠀⠀⢠⣃⠤⠤⠤⣤⣤⣤⣐⡄⡆⠀⠣⡀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⣤⣾⣿⣿⡿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠓⢤⡀⠀⠀⠀⠀⢀⡰⠁⠀⠀⡔⣄⠀⠀⢧⡀⠠⣠⠉⠀⠀⠀⠀⠀⠀⠀⠀⢉⣇⣼⣥⡝⠀⠀⡠⣦⠀⠀⠘⢆⠀⠀⠀⢰⣾⢿⡭⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠛⢄⠤⠖⠊⠁⠀⢀⡞⠀⠈⠣⡀⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⡿⠋⠀⢀⠾⢁⣿⣧⡀⠀⠈⠑⠢⠤⡼⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠞⠀⠀⠀⠀⠙⢆⠀⠈⠳⣄⠀⠀⢠⢤⣤⣴⣿⣿⣿⠟⠀⠀⡴⠃⠀⢸⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠑⢦⡀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠳⡀⠀⠈⠣⡰⠁⠀⣿⣿⣿⠟⠁⠀⢠⡞⠀⠀⠀⣾⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⢀⠴⠋⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠀⠀⠀⢘⡄⠀⠀⠀⠀⠀⢠⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢆⠀⠀⠈⠉⠉⠉⠉⠁⠀⠀⣴⠃⠀⠀⠀⠀⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⢸⠁⠀⢸⣿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠇⠀⠀⠀⠀⣇⠀⠀⠀⠀⢠⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠤⠤⠤⠤⠤⠤⠤⠤⠾⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⡼⠀⢀⣿⣿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡸⠀⠀⠀⠀⠀⢸⡀⠀⠀⢀⡎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠈⢻⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⢀⡇⠀⢸⣿⣿⣿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠃⠀⠀⠀⠀⠀⠀⡇⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⢡⠀⠀⠀⠀⠀⠀⠀⠹⣿⣿⣿⣿⣿⣿⡇⠀⠀⢸⠀⠀⠈⢿⣿⣿⠛⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⡴⠋⠀⠀⠀⠀⠀⠀⠀⠀⢹⠀⠀⡼⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣇⠀⠀⡯⠀⠀⠀⠈⡿⠃⠀⠀⠑⣦⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⡄⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡄⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⠀⢰⠇⠀⠀⠀⠀⠀⠀⢀⣤⣾⣿⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢰⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⠃⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿⣿⣿⣿⣿⠀⢸⡄⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⢸⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠓⢄⠀⠀⠀⠀⠀⠀⠠⣿⣿⣿⣿⣿⣿⡆⠀⡇⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⡼⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⡀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⡇⠀⡇⠀⠀⠀⠀⠀⠀⢹⣿⣿⣿⣇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⡄⠀⠀⠀⣿⣿⣿⣿⣿⣿⡇⠀⡇⠀⠀⠀⠀⠀⠀⠈⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢸⠅⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⣇⠀⠀⠀⣿⣿⣿⣿⣿⣿⡇⠀⢹⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⠿⡆⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠘⡄⠀⠈⠉⠐⠒⠂⠤⠤⠀⣀⡇⠀⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⣿⠀⠀⠀⣿⣿⣿⣿⣿⣿⣇⠀⢸⣀⠀⠤⠤⠐⠒⠁⠉⠁⠀⢰⠁⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⡎⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠈⠦⢤⣀⣀⡀⠀⠀⠀⠀⡜⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⠀⠀⢇⠀⠀⠀⠀⣀⣀⣀⠤⠼⠁⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠦⣀⠉⢩⠓⠃⠀⠀⡇⠒⠠⠤⠤⢀⣀⣀⣀⢸⣿⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⣿⠇⣀⣀⣿⡿⠿⠿⠟⠛⢹⠀⠀⠘⠻⣿⣿⣿⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⠞⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⢰⠈⠉⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠁⡆⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠻⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡗⠢⠤⠄⣀⣀⣀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠇⠀⠀⣀⣀⣀⠠⠤⠴⢾⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⣲⣶⣦⣤⣤⣀⣉⣽⠋⠉⠉⠓⠀⠀⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠊⣉⣩⡯⠉⣩⣤⣴⣶⣶⣾⣿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠙⠚⠚⠻⠥⠾⡿⢿⣯⣻⣿⣿⣿⣿⣿⣛⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠧⠚⠛⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⡀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⡏⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⡁⠐⠒⠒⠒⢺⠀⠀⠀⠀⡗⠒⠒⠒⠋⢉⠟⠀⠀⢁⡄⡒⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠱⣀⣀⣀⣀⣸⠀⠀⠀⠀⣇⣀⣀⣀⣠⠎⠀⢄⠄⠀⠀⠀⠠⠐⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢆⠀⠀⢸⠀⠀⠀⠀⡇⢀⣾⡿⠃⠀⠈⠈⠁⠉⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⡄⢸⠀⠀⠀⠀⣇⣾⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠺⠀⠀⠀⠀⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+https://www.deviantart.com/argonaut11/art/Genista-Darling-In-The-Franxx-Phone-Wallpaper-744587004
+*/
+
 const {remote, ipcRenderer} = require('electron');
 
 const COMMANDS = {
@@ -69,6 +128,19 @@ const COMMANDS = {
 		command: "DL_IAPS",
 		options: {
 			appId: "0"
+		}
+	},
+	briefingIAPs: {
+		command: "BRIEF_IAPS",
+		options: {
+			appId: "0"
+		}
+	},
+	switch: {
+		command: "SWITCH_IAPS",
+		options: {
+			appId: "0",
+			orders: []
 		}
 	}
 };
@@ -159,6 +231,20 @@ function resetEditConfirmer(s){
 		s.value = 0;
 }
 
+function refreshSwitchConfirmer(s){
+	if (s.value >= 98){
+		s.value = 100;
+		s.style.backgroundColor = "#DA4000";
+		s.disabled = true;
+		switchIAPs();
+	}
+}
+
+function resetSwitchConfirmer(s){
+	if (s.value < 98)
+		s.value = 0;
+}
+
 function switchMode(e){
 	if (!e.target.classList.contains("xradio"))
 		return;
@@ -168,10 +254,12 @@ function switchMode(e){
 	}
 	e.target.className = "xradio xradio_selected";
 
-	let dialogCreate = document.getElementById("dialog_sheet_create");
-	let dialogEdit = document.getElementById("dialog_sheet_edit");
+	let dialogCreate = document.getElementById("dialog_main_create");
+	let dialogEdit = document.getElementById("dialog_main_edit");
+	let dialogSwitch = document.getElementById("dialog_main_switch");
 	dialogCreate.style.display = "none";
 	dialogEdit.style.display = "none";
+	dialogSwitch.style.display = "none";
 
 	switch (e.target.id){
 		case("xr_create"): {
@@ -182,7 +270,8 @@ function switchMode(e){
 			dialogEdit.style.display = "block";
 			break;
 		}
-		case("xr_recreate"): {
+		case("xr_switch"): {
+			dialogSwitch.style.display = "block";
 			break;
 		}
 	}
@@ -709,6 +798,7 @@ function selectApp(app){
 let defaultButtonColor;
 let buttonsLocked = false;
 let editButtonsLocked = false;
+let switchButtonsLocked = false;
 function createIAPs(overwriteAllowed, sequentialMode){
 	if (buttonsLocked) return;
 	buttonsLocked = true;
@@ -780,24 +870,39 @@ function editIAPs(){
 	return false;
 }
 
-function recreateIAPs(){
-	if (buttonsLocked) return;
-	buttonsLocked = true;
-	status("IAP creation process is initiated. You can observe progress using console.");
-
-	let message = COMMANDS.recreate;
+function switchIAPs(){
+	if (switchButtonsLocked) return;
+	switchButtonsLocked = true;
+	let dialog = document.getElementById("dialog_progress");
+	dialog.innerHTML = "";
+	status("IAP editing process is initiated. Hover list items to see error messages.");
+	
+	let message = COMMANDS.switch;
 	message.options.appId = selectedApp.id;
+	message.options.rejectedOnly = document.getElementById("dialog_switch_rejectedOnly").checked;
 
-	// let button = document.getElementById("dialog_main_button_recreate");
-	// defaultButtonColor = button.style.backgroundColor;
-	// button.style.backgroundColor = "#FDD";
+	let orders = [];
+	for (let item of document.getElementById("dialog_switch_list").children){
+		let checkbox = item.querySelector("input");
+		if (item.dataset.bundle && checkbox.checked) {
+			orders.push(item.dataset.bundle);
+		}
+	}
+	message.options.orders = orders;//collectOrders(tables["spreadsheet_edit"], selectedApp.bundle, false);
+
+	let button = document.getElementById("dialog_switch_confirmer");
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
-				status("Finished, check console");
-				button.style.backgroundColor = defaultButtonColor;
-				buttonsLocked = false;
+				status("Finished");
+				button.disabled = false;
+				button.style.backgroundColor = "#333";
+				button.value = 0;
+				switchButtonsLocked = false;
+				break;
+			case(RESPONSE_CODES.AUTH):
+				relogin();
 				break;
 			case(RESPONSE_CODES.ERROR):
 				status(r.message);
@@ -805,7 +910,7 @@ function recreateIAPs(){
 			default:
 				status(r);
 		}
-	});
+	})
 
 	return false;
 }
@@ -817,10 +922,60 @@ function downloadIAPs(){
 	status("Loading...")
 
 	sendCommand(message, (r)=>{
-		//if (r.errorCount > 0) status("Failed to download " + r.errorCount + " IAPs");
-		//initTable("spreadsheet_edit", rsMatrix, cMatrix);
 		tables["spreadsheet_edit"].clear();
 		addOrders(tables["spreadsheet_edit"], r);
+	});
+
+	return false;
+}
+
+const SWITCH_ITEM_ID_PREFIX = "dialog_switch_list_";
+const SWITCH_CBOX_ID_PREFIX = "dialog_switch_list_cbox";
+function downloadIAPsBriefing(){
+	let message = COMMANDS.briefingIAPs;
+	message.options.appId = selectedApp.id;
+
+	status("Loading...")
+
+	/*
+	r.iaps = [
+		{
+			bundle
+			rejected
+		}
+	]
+	*/
+	sendCommand(message, (r)=>{
+		switch(r.code){
+			case(RESPONSE_CODES.OK):
+				let list = document.getElementById("dialog_switch_list");
+				list.innerHTML = "";
+
+				for (let iap of r.iaps){
+					let item = document.createElement("div");
+					item.id = SWITCH_ITEM_ID_PREFIX + iap.bundle;
+					item.dataset.bundle = iap.bundle;
+					
+					let checkbox = document.createElement("input");
+					checkbox.type = "checkbox";
+					checkbox.id = SWITCH_CBOX_ID_PREFIX + iap.bundle
+					checkbox.checked = iap.rejected;
+
+					let checkLabel = document.createElement("label");
+					checkLabel.setAttribute("for", checkbox.id);
+					checkLabel.textContent = iap.bundle
+
+					item.appendChild(checkbox);
+					item.appendChild(checkLabel);
+					list.appendChild(item);
+				}
+				break;
+			case(RESPONSE_CODES.ERROR):
+				status(r.message);
+				break;
+			default:
+				status(r);
+		}
 	});
 
 	return false;

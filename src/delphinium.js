@@ -89,6 +89,20 @@ module.exports = {
 		];
 		return await Promise.all(promises);
 	},
+	briefIAPs: async (appId)=>{
+		let iaps = await argentea.listIAPs(appId);
+		if (!iaps) return null;
+
+		let results = [];
+		for (let iap of iaps){
+			results.push({
+				bundle: iap.vendorId,
+				rejected: iap.iTunesConnectStatus == "developerActionNeeded"
+			});
+		}
+
+		return results;
+	},
 	downloadIAPs: async (appId, storage)=>{
 		let iaps = await argentea.listIAPs(appId);
 		if (!iaps) return null;
@@ -169,7 +183,7 @@ module.exports = {
 					argentea.planning.endIAP(firstRSOrder.bundle, false);
 					return false;
 				}
-				productDetails.versions[0].details.value = [buildEnUsVersion(firstRSOrder.version.name, firstRSOrder.version.desc)];
+				productDetails.versions[0].details.value = [buildVersion(firstRSOrder.version.name, firstRSOrder.version.desc)];
 				productDetails.pricingDurationType = {value: firstRSOrder.duration};
 				if (! await argentea.operations.updateIAPDetails(firstRSOrder.bundle, productDetails, appId, productId)){
 					argentea.planning.endIAP(firstRSOrder.bundle, false);
@@ -210,7 +224,7 @@ module.exports = {
 					priceTierEndDate: null,
 					priceTierEffectiveDate: null
 				}}];
-				template.versions[0].details.value = [buildEnUsVersion(order.version.name, order.version.desc)];
+				template.versions[0].details.value = [buildVersion(order.version.name, order.version.desc)];
 				
 				if (order.type == "rs"){
 					template.pricingDurationType = {value: order.duration};
@@ -267,11 +281,15 @@ module.exports = {
 		for (let order of orders){
 			argentea.planning.beginIAP(order.bundle);
 			let productId = await argentea.operations.obtainProductId(order.bundle, appId, 2);
+			if (!productId){
+				argentea.planning.endIAP(order.bundle, false);
+				continue;
+			}
 
 			let productDetails = await argentea.operations.requestIAPDetails(order.bundle, appId, productId);
 			if (!productDetails){
 				argentea.planning.endIAP(order.bundle, false);
-				return false;
+				continue;
 			}
 
 			let type = order.type = argentea.toInternalIAPType(productDetails.addOnType);
@@ -290,19 +308,76 @@ module.exports = {
 				productDetails.referenceName.value = order.refname;
 			if (order.version.name && order.version.name != "" &&
 			    order.version.desc && order.version.desc != "")
-				productDetails.versions[0].details.value = [buildEnUsVersion(order.version.name, order.version.desc)];
+				productDetails.versions[0].details.value = [buildVersion(order.version.name, order.version.desc)];
 			if (order.duration && order.duration != "")
 				productDetails.pricingDurationType = {value: order.duration};
 			
 			if (! await argentea.operations.updateIAPDetails(order.bundle, productDetails, appId, productId)){
 				argentea.planning.endIAP(order.bundle, false);
-				//return false;
+				continue;
 			}
 			argentea.planning.endIAP(order.bundle, true);
 		}
 
 		return true;
+	},
+	switchIAPsVersion: async (orders, appId, progressCallback, rejectedOnly)=>{
+		argentea.planning.resetProgressList();
+		argentea.planning.setProgressCallback(progressCallback);
+
+		//Wrap list of bundles into objects for better consistency
+		for (let i in orders){
+			orders[i] = {bundle: orders[i]};
+		}
+
+		for (let order of orders)
+			argentea.planning.planSwitchVersion(order.bundle);
+
+		for (let order of orders){
+			argentea.planning.beginIAP(order.bundle);
+			let productId = await argentea.operations.obtainProductId(order.bundle, appId, 2);
+			if (!productId){
+				argentea.planning.endIAP(order.bundle, false);
+				continue;
+			}
+
+			let productDetails = await argentea.operations.requestIAPDetails(order.bundle, appId, productId);
+			if (!productDetails){
+				argentea.planning.endIAP(order.bundle, false);
+				continue;
+			}
+
+			let failureMessage = undefined;
+			if (productDetails.versions[0] && productDetails.versions[0].details.value){
+				if (!modifyVersionByFlippingLocale(productDetails.versions[0].details.value, "en-US", "en-CA")){
+					failureMessage = "Can't find any names with locales en-US or en-CA. Edit IAPs to modify names and descriptions in en-US";
+				}
+			} else {
+				failureMessage = "Can't find any names and descriptions";
+			}
+
+			if (!failureMessage && await argentea.operations.updateIAPDetails(order.bundle, productDetails, appId, productId)){
+				argentea.planning.endIAP(order.bundle, true);
+			} else {
+				argentea.planning.endIAP(order.bundle, false, failureMessage);
+			}
+		}
+
+		return true;
 	}
+}
+
+function modifyVersionByFlippingLocale(versions, localeA, localeB){
+	for (let i in versions){
+		if (versions[i].value.localeCode == localeA){
+			versions[i].value.localeCode = localeB;
+			return true;
+		} else if (versions[i].value.localeCode == localeB){
+			versions[i].value.localeCode = localeA;
+			return true;
+		}
+	}
+	return false;
 }
 
 function getFirstRSOrder(orders){
@@ -334,11 +409,11 @@ async function sendPriceAndTrial(order, appId, productId, rsMatrix, cMatrix, cou
 	return true;
 }
 
-function buildEnUsVersion(name, description){
+function buildVersion(name, description, countryCode = "en-US"){
 	return {value: {
 		description: {value: description},
 		name:        {value: name},
-		localeCode:  "en-US"
+		localeCode:  countryCode
 	}};
 }
 

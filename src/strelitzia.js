@@ -281,12 +281,15 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("APPS"): {
+		sendStatusUpdate("Checking session");
 		let session = await delphinium.checkSession();
 		if (!session){
+			sendStatusUpdate("Authorization required");
 			response.code = RESPONSE_CODES.AUTH;
 			return response;
 		}
 
+		sendStatusUpdate("Downloading list of apps");
 		let apps = await delphinium.listApps();
 		if (apps){
 			response.code = RESPONSE_CODES.OK;
@@ -342,6 +345,26 @@ async function respondToCommand(command){
 			return null;
 		}
 	}
+	case ("BRIEF_IAPS"): {
+		let session = await delphinium.checkSession();
+		if (!session){
+			response.code = RESPONSE_CODES.AUTH;
+			return response;
+		}
+
+		let result = await delphinium.briefIAPs(command.options.appId)
+		if (result){
+			sendStatusUpdate("Downloaded");
+			response.iaps = result;
+			response.code = RESPONSE_CODES.OK;
+			return response;
+		} else {
+			sendStatusUpdate("Failed to download");
+
+			response.code = RESPONSE_CODES.ERROR;
+			return response;
+		}
+	}
 	case ("CREATE_IAP"): {
 		let session = await delphinium.checkSession();
 		if (!session){
@@ -370,6 +393,22 @@ async function respondToCommand(command){
 
 		await delphinium.editIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.sequentialMode);
 		//await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
+
+		response.code = RESPONSE_CODES.OK;
+		return response;
+	}
+	case ("SWITCH_IAPS"): {
+		let session = await delphinium.checkSession();
+		if (!session){
+			response.code = RESPONSE_CODES.AUTH;
+			return response;
+		}
+
+		let progressUpdate = (progressList)=>{
+			mainWindow.webContents.send("progressUpdate", progressList);
+		}
+		
+		await delphinium.switchIAPsVersion(command.options.orders, command.options.appId, progressUpdate, command.options.rejectedOnly);
 
 		response.code = RESPONSE_CODES.OK;
 		return response;

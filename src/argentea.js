@@ -277,6 +277,32 @@ module.exports = {
 
 			mainProgressList.push(t);
 		},
+		planSwitchVersion: (bundleName)=>{
+			let t = {
+				name: "IAP " + bundleName,
+				id: bundleName,
+				steps: [
+					{
+						name: "Obtain IAP id",
+						id: bundleName + OPERATION_OBTAINID,
+						status: PROGRESS_INITIAL
+					},
+					{
+						name: "Load IAP data",
+						id: bundleName + OPERATION_DETAILS,
+						status: PROGRESS_INITIAL
+					},
+					{
+						name: "Save changes",
+						id: bundleName + OPERATION_UPDATEIAP,
+						status: PROGRESS_INITIAL
+					}
+				],
+				status: PROGRESS_INITIAL
+			};
+
+			mainProgressList.push(t);
+		},
 		beginIAP: (bundleName)=>{
 			progress(bundleName, null, PROGRESS_INPROGRESS);
 		},
@@ -416,10 +442,10 @@ module.exports = {
 		},
 		requestIAPDetails: async (bundleName, appId, productId)=>{
 			progress(bundleName, OPERATION_DETAILS, PROGRESS_INPROGRESS);
-			let detailsResponse = await requestIAP(appId, productId);
-			if (detailsResponse){
+			let response = await chlorophytum.sendIAPDetailsRequest(appId, productId);
+			if (response.result && response.result.data){
 				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_OK);
-				return detailsResponse;
+				return response.result.data;
 			} else {
 				progress(bundleName, OPERATION_DETAILS, PROGRESS_DONE_FAIL, response.errors);
 				return null;
@@ -535,7 +561,7 @@ module.exports = {
 			return null;
 		}
 	},
-
+	
 	downloadRSMatrix: async (appId)=>{
 		let matrix = [];
 		let rawRSMatrix = (await chlorophytum.sendRSMatrixRequest(appId)).result;

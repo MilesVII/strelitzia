@@ -176,7 +176,11 @@ module.exports = {
 
 	sendTrialCreation: (trial)=>{
 		return genericRequest(METHOD_POST, JSON.stringify(trial), ENDPOINTS.trialCreate, null);
-	}
+	}/*,
+
+	uploadReviewScreenshot: (bytes)=>{
+		return genericRequest(METHOD_POST, bytes, ENDPOINTS.du, null, true, 1);
+	}*/
 };
 
 const ENDPOINTS = {
@@ -201,7 +205,9 @@ const ENDPOINTS = {
 	pricingDownload:       "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing",                         //appId, productId
 	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
 	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
-	countryCodesBetter:    "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/pricing/supportedCountries"
+	countryCodesBetter:    "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/pricing/supportedCountries"/*,
+	appVersionRef:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/version/ref",
+	du:                    "https://du-itc.itunes.apple.com/upload/image"*/
 }
 
 const METHOD_GET = "GET";
@@ -291,14 +297,15 @@ const REQUEST_TIMEOUT = 10000;
 async function genericRequest(method, data, endpoint, endpointParameters, jsonExpected = false, tries = RETRIES){
 	let requestErrors = [];
 	while (tries > 0){
+		let tryIndex = RETRIES - tries;
 		await sleep(RETRY_DELAY_MS_MIN + RETRY_DELAY_MS_SPREAD * Math.random());
 		--tries;
 		try { //Excessive, may be deleted
-			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, RETRIES - tries - 1);
+			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, tryIndex);
 			if (response)
 				return {result: response, errors: errorsToString(requestErrors)};
 		} catch(e){}
-		await sleep(RETRY_DELAY_MS_MIN);
+		await sleep(RETRY_DELAY_MS_MIN * tryIndex);
 	}
 	return {result: null, errors: errorsToString(requestErrors)};
 }
@@ -310,6 +317,10 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 			if (r.data){
 				if (r.data.sectionErrorKeys){
 					requestErrors[retryIndex] = r.data.sectionErrorKeys;
+				}
+			} else if(r.messages){
+				if (r.messages.error){
+					requestErrors[retryIndex] = r.messages.error;
 				}
 			}
 		} catch (e){
@@ -388,8 +399,13 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 				case (504):
 					let message = `Request failed: ${res.statusCode} at ${endpoint}`;
 					console.log(message);
-					//console.log(responseBody);
-					requestErrors[retryIndex] = [BAD_APOL]
+					
+					checkForErrors(responseBody);
+					if (requestErrors[retryIndex])
+						requestErrors[retryIndex].push(BAD_APOL);
+					else
+						requestErrors[retryIndex] = [BAD_APOL];
+					
 					resolve(null);
 					break;
 				default:

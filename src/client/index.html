@@ -13,7 +13,7 @@
 		<link rel="stylesheet" href="./handsontable/handsontable.full.min.css" type="text/css" />
 		
 		<link rel="stylesheet" type="text/css" href="styles.css">
-		<script type="text/javascript" src="./renderer.js"></script>
+		<script type="text/javascript" src="./genista.js"></script>
 		</script>
 	</head>
 	<body onload="start()">
@@ -74,10 +74,10 @@
 				<div id="dialog_main_appname"></div>
 				<div class="xbutton" onclick="listApps()">Back to app list</div>
 				<div class="xradio_host" id="mode" onclick="switchMode(event)">
-					<div class="xradio" id="xr_create">Create</div><div class="xradio" id="xr_edit">Edit</div>
+					<div class="xradio" id="xr_create">Create</div><div class="xradio" id="xr_edit">Edit</div><div class="xradio" id="xr_switch">Switch</div>
 				</div>
 			</div>
-			<div class="dialog" id="dialog_sheet_create">
+			<div class="dialog" id="dialog_main_create">
 				<input type="file" id="filePicker" onchange="addFromFile(this.files[0]);"></input>
 				<label class="xbutton" for="filePicker">Load from file</label>
 				<div>
@@ -93,11 +93,22 @@
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_create_confirmer" oninput="refreshCreateConfirmer(this)" onmouseup="resetCreateConfirmer(this)">
 				</div>
 			</div>
-			<div class="dialog" id="dialog_sheet_edit">
+			<div class="dialog" id="dialog_main_edit">
 				<div class="xbutton" id="dialog_button_download" onclick="downloadIAPs();">Download existing IAPs</div>
 				<div id="spreadsheet_edit" style="font-size: 10pt;"></div>
 				<div class="slidecontainer">
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_edit_confirmer" oninput="refreshEditConfirmer(this)" onmouseup="resetEditConfirmer(this)">
+				</div>
+			</div>
+			<div class="dialog" id="dialog_main_switch">
+				<div class="xbutton" id="dialog_button_download" onclick="downloadIAPsBriefing();">Download existing IAPs</div>
+				<div>
+					<input type="checkbox" id="dialog_switch_rejectedOnly">
+					<label for="dialog_switch_rejectedOnly">Switch rejected IAPs only</label>
+				</div>
+				<div id="dialog_switch_list" class="marginedBlock"></div>
+				<div class="slidecontainer">
+					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_switch_confirmer" oninput="refreshSwitchConfirmer(this)" onmouseup="resetSwitchConfirmer(this)">
 				</div>
 			</div>
 		</div>
