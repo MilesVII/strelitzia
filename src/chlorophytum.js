@@ -67,12 +67,18 @@ let storage = null;
 let saveStorage;
 const JSON_EXPECTED = true;
 
+let status;
+
 module.exports = {
 	BAD_APOL: BAD_APOL,
 
 	setStorage: (s, saveCallback)=>{
 		storage = s;
 		saveStorage = saveCallback;
+	},
+
+	setSUC: (cb)=>{
+		status = cb;
 	},
 
 	sendServiceKeyRequest: ()=>{
@@ -99,6 +105,10 @@ module.exports = {
 			} 
 		});
 		return genericRequest(METHOD_POST, data, ENDPOINTS.code, null);
+	},
+
+	sendRefRequest: ()=>{
+		return genericRequest(METHOD_GET, null, ENDPOINTS.appVersionRef, null, JSON_EXPECTED);
 	},
 
 	sendUserDetails: ()=>{
@@ -176,11 +186,27 @@ module.exports = {
 
 	sendTrialCreation: (trial)=>{
 		return genericRequest(METHOD_POST, JSON.stringify(trial), ENDPOINTS.trialCreate, null);
-	}/*,
+	},
 
-	uploadReviewScreenshot: (bytes)=>{
-		return genericRequest(METHOD_POST, bytes, ENDPOINTS.du, null, true, 1);
-	}*/
+	uploadReviewScreenshot: (appId, productId, bytes, filename, ssoToken)=>{
+		if (!storage.cpId){
+			return {result: null, errors: "SSO token or content provider ID not loaded. Please restart the app."};
+		}
+		
+		let additionalHeaders = {
+			"X-Apple-Upload-AppleId": appId,
+			"X-Apple-Upload-ContentProviderId": storage.cpId,
+			"X-Apple-Upload-itctoken": ssoToken,
+			"X-Original-Filename": filename,
+			"X-Apple-Upload-Validation-RuleSets": "MZPFT.SortedN41ScreenShot",
+			"Content-Length": bytes.length,
+			"Connection": "keep-alive",
+			"Accept": "application/json, text/plain, */*",
+			"Content-Type": "image/png",
+			"X-Apple-Upload-Referrer": "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/ng/app/" + appId + "/addons/" + productId
+		};
+		return genericRequest(METHOD_POST, bytes, ENDPOINTS.du, null, true, 1, 120000, additionalHeaders);
+	}
 };
 
 const ENDPOINTS = {
@@ -205,9 +231,9 @@ const ENDPOINTS = {
 	pricingDownload:       "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#/pricing",                         //appId, productId
 	trialCreate:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/iaps/pricing/batch",
 	countryCodes:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
-	countryCodesBetter:    "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/pricing/supportedCountries"/*,
+	countryCodesBetter:    "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/pricing/supportedCountries",
 	appVersionRef:         "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/version/ref",
-	du:                    "https://du-itc.itunes.apple.com/upload/image"*/
+	du:                    "https://du-itc.itunes.apple.com/upload/image"
 }
 
 const METHOD_GET = "GET";
@@ -252,7 +278,7 @@ function formHeader(dataLength){
 		"Content-Length": dataLength,
 		"X-Requested-With": 'XMLHttpRequest',
 		"Accept": "application/json, text/javascript"
-	}
+	};
 	if (storage["sessionId"]) headers["X-Apple-Id-Session-Id"] = storage["sessionId"];
 	if (storage["serviceKey"])   headers["X-Apple-Widget-Key"] = storage["serviceKey"];
 	if (storage["scnt"])                       headers["scnt"] = storage["scnt"];
@@ -292,16 +318,16 @@ function sleep(ms) {
 
 const RETRY_DELAY_MS_MIN = 1200;
 const RETRY_DELAY_MS_SPREAD = 4200;
-const RETRIES = 5;
-const REQUEST_TIMEOUT = 10000;
-async function genericRequest(method, data, endpoint, endpointParameters, jsonExpected = false, tries = RETRIES){
+async function genericRequest(method, data, endpoint, endpointParameters, jsonExpected = false, tries = 5, timeout = 10000, additionalHeaders = null){
+	status("EP: " + endpoint + "\nEPP: " + endpointParameters + "\nD: " + data);
 	let requestErrors = [];
+	let triesTotal = tries;
 	while (tries > 0){
-		let tryIndex = RETRIES - tries;
+		let tryIndex = triesTotal - tries;
 		await sleep(RETRY_DELAY_MS_MIN + RETRY_DELAY_MS_SPREAD * Math.random());
 		--tries;
 		try { //Excessive, may be deleted
-			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, tryIndex);
+			let response = await unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, tryIndex, timeout, additionalHeaders);
 			if (response)
 				return {result: response, errors: errorsToString(requestErrors)};
 		} catch(e){}
@@ -310,7 +336,7 @@ async function genericRequest(method, data, endpoint, endpointParameters, jsonEx
 	return {result: null, errors: errorsToString(requestErrors)};
 }
 
-function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, retryIndex){
+function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonExpected, requestErrors, retryIndex, timeout, additionalHeaders){
 	function checkForErrors(body){
 		try {
 			let r = JSON.parse(body);
@@ -324,15 +350,16 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 				}
 			}
 		} catch (e){
-			requestErrors[retryIndex] = "Failed to check for errors: " + body;
+			requestErrors[retryIndex] = ["Failed to check for errors: " + body];
 		}
 	}
 	return new Promise(resolve => {
 		const options = {
 			method: method,
 			headers: formHeader((method == "GET") ? 0 : data.length),
-			timeout: REQUEST_TIMEOUT
+			timeout: timeout
 		}
+		if (additionalHeaders) Object.assign(options.headers, additionalHeaders);
 		
 		let requestTarget;
 		if (endpointParameters)
@@ -347,16 +374,16 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 				saveStorage();
 			}
 
-			let data = [];
+			let responseData = [];
 			res.on('data', chunk => {
-				data.push(chunk);
+				responseData.push(chunk);
 			});
 			res.on('end', async () => {
-				let responseBody = Buffer.concat(data).toString();
+				let responseBody = Buffer.concat(responseData).toString();
 				if (res.headers["content-encoding"] == "gzip"){
 					if (method != "POST")
 						console.log("WARNING: got gzipped response to " + method + " request.\nEndpoint: " + requestTarget);
-					responseBody = zlib.gunzipSync(Buffer.concat(data)).toString();
+					responseBody = zlib.gunzipSync(Buffer.concat(responseData)).toString();
 				}
 
 				switch (res.statusCode){
@@ -364,7 +391,7 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 				case (201):
 				case (204):
 					checkForErrors(responseBody);
-					if (method == "GET"){
+					if (method == "GET" || endpoint == ENDPOINTS.du){
 						if (jsonExpected){
 							try {
 								resolve(JSON.parse(responseBody));
@@ -419,7 +446,7 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 		req.on('timeout', () => {
 			console.log("Timeout happened on " + endpoint);
 			req.destroy();
-			requestErrors[retryIndex] = [BAD_APOL, "Timeout: " + (REQUEST_TIMEOUT / 1000) + "s"];
+			requestErrors[retryIndex] = [BAD_APOL, "Timeout: " + (timeout / 1000) + "s"];
 			resolve(null);
 		});
 

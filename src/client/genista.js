@@ -281,6 +281,7 @@ let tables = {
 	"spreadsheet_create": null,
 	"spreadsheet_edit": null
 }
+tableFiles = [];
 function initTable(id, rsMatrix, cMatrix){
 	if (tables[id]) {
 		tables[id].destroy(); 
@@ -298,7 +299,7 @@ function initTable(id, rsMatrix, cMatrix){
 	let settings = {
 		data: [],
 		rowHeaders: true,
-		colHeaders: ["Type", "Reference Name", "Bundle Suffix", "Price (RS)", "Price (C/NC)", "Duration", "Trial", "Name (en-US)", "Description (en-US)"],
+		colHeaders: ["Type", "Reference Name", "Bundle Suffix", "Price (RS)", "Price (C/NC)", "Duration", "Trial", "Name (en-US)", "Description (en-US)", "Screenshot"],
 		columns: [
 			{
 				type: "dropdown",
@@ -323,7 +324,17 @@ function initTable(id, rsMatrix, cMatrix){
 				source: IAP_TRIALS
 			},
 			{},
-			{}
+			{},
+			{
+				type: "dropdown",
+				source: (query, callback)=>{
+					let names = [];
+					for (let file of tableFiles){
+						names.push(file.name);
+					}
+					callback(names);
+				}
+			}
 		],
 		minSpareRows: 1,
 		licenseKey: "non-commercial-and-evaluation"
@@ -351,7 +362,7 @@ function start(){
 		"url(\"./backs/backD.jpg\")",
 		"url(\"./backs/backA.jpg\")",
 		"url(\"./backs/backG.jpg\")",
-		"url(\"./backs/backС.jpg\")"
+		"url(\"./backs/backC.jpg\")"
 	];
 	document.getElementById("headerText").textContent = names[Math.floor(Math.random() * names.length)] + " " + remote.app.getVersion();
 	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
@@ -490,6 +501,14 @@ function collectOrders(sheet, appBundle, forEditing = true){
 			entry.price    = row[3];
 		} else {
 			entry.price    = row[4];
+		}
+		if (row[9]){
+			for (let file of tableFiles){
+				if (file.name == row[9]){
+					entry.screenshot = file;
+					break;
+				}
+			}
 		}
 		if (!forEditing || isValid(entry, appBundle))
 			harvested.push(entry);
@@ -888,7 +907,7 @@ function switchIAPs(){
 			orders.push(item.dataset.bundle);
 		}
 	}
-	message.options.orders = orders;//collectOrders(tables["spreadsheet_edit"], selectedApp.bundle, false);
+	message.options.orders = orders;
 
 	let button = document.getElementById("dialog_switch_confirmer");
 
@@ -927,6 +946,25 @@ function downloadIAPs(){
 	});
 
 	return false;
+}
+
+async function updateScreenshotData(){
+	let files = document.getElementById("screenshotPicker").files;
+
+	let arrays = [];
+	let promises = [];
+	for (let file of files){
+		promises.push(file.arrayBuffer());
+	}
+	arrays = await Promise.all(promises);
+	for (let i in arrays){
+		arrays[i] = {
+			name: files[i].name, 
+			bytes: new Uint8Array(arrays[i])
+		};
+	}
+
+	tableFiles = arrays;
 }
 
 const SWITCH_ITEM_ID_PREFIX = "dialog_switch_list_";

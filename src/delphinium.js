@@ -80,12 +80,13 @@ module.exports = {
 	listApps: async ()=>{
 		return await argentea.listApps();
 	},
-	/* [RS Matrix, C Matrix, Country Codes] */
+	/* [RS Matrix, C Matrix, Country Codes, ContentProvider ID, SSO Token] */
 	downloadMatrices: async (appId)=>{
 		let promises = [
 			argentea.downloadRSMatrix(appId),
 			argentea.downloadCMatrix(appId),
-			argentea.downloadCountryCodes(appId)
+			argentea.downloadCountryCodes(appId),
+			argentea.acquireContentProviderId()
 		];
 		return await Promise.all(promises);
 	},
@@ -311,6 +312,19 @@ module.exports = {
 				productDetails.versions[0].details.value = [buildVersion(order.version.name, order.version.desc)];
 			if (order.duration && order.duration != "")
 				productDetails.pricingDurationType = {value: order.duration};
+			if (order.screenshot && productDetails.versions[0]){
+				let asset = await argentea.operations.uploadReviewScreenshot(order.bundle, appId, productId, order.screenshot);
+				productDetails.versions[0].reviewScreenshot.value = {
+					assetToken: asset.token,
+            		sortOrder: 0,
+					type: asset.type,
+					originalFileName: order.screenshot.name,
+					size: order.screenshot.bytes.length,
+					height: asset.height,
+					width: asset.width,
+					checksum: asset.md5
+				};
+			}
 			
 			if (! await argentea.operations.updateIAPDetails(order.bundle, productDetails, appId, productId)){
 				argentea.planning.endIAP(order.bundle, false);
@@ -365,6 +379,21 @@ module.exports = {
 
 		return true;
 	}
+	/*uploadScreenshots: async (appId, files, progressCallback)=>{
+		argentea.planning.resetProgressList();
+		argentea.planning.setProgressCallback(progressCallback);
+
+		for (let file of files){
+			argentea.planning.planReviewScreenshotUpload(file.name);
+		}
+
+		for (let file of files){
+			let response = await argentea.operations.uploadReviewScreenshot(appId, file);
+			console.log(response);
+		}
+
+		return true;
+	}*/
 }
 
 function modifyVersionByFlippingLocale(versions, localeA, localeB){

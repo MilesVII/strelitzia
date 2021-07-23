@@ -69,8 +69,7 @@ const { assert } = require('console');
 
 const chlorophytum = require("./chlorophytum.js");
 const delphinium = require('./delphinium.js');
-
-
+chlorophytum.setSUC(sendStatusUpdate);
 let mainWindow;
 
 function createWindow () {
@@ -170,14 +169,36 @@ function sendStatusUpdate(message){
 	mainWindow.webContents.send("statusUpdate", message);
 }
 
+let lastSessionCheck = 0;
+const SESSION_CHECK_COOLDOWN_MS = 120 * 1000;
 async function respondToCommand(command){
-	function sleep(ms) {
-		return new Promise(resolve => setTimeout(resolve, ms));
-	}
-	
+	const CHECK_SESSION_NOT_REQUIRED = [
+		"SERVICE",
+		"LOGIN",
+		"CODE",
+		"SEL_TEAM",
+		"SEL_APP"
+	];
+
 	let response = {
 		code: RESPONSE_CODES.ERROR,
 		message: "Error message unset"
+	}
+
+	let currentTime = Date.now();
+	if (currentTime - lastSessionCheck > SESSION_CHECK_COOLDOWN_MS &&
+		!CHECK_SESSION_NOT_REQUIRED.includes(command.command)){
+		lastSessionCheck = currentTime;
+		sendStatusUpdate("Checking session");
+		let session = await delphinium.checkSession();
+		if (!session){
+			response.code = RESPONSE_CODES.AUTH;
+			return response;
+		}
+		sendStatusUpdate("");
+	}
+	let defaultProgressUpdate = (progressList)=>{
+		mainWindow.webContents.send("progressUpdate", progressList);
 	}
 
 	switch (command.command){
@@ -211,30 +232,25 @@ async function respondToCommand(command){
 		break;
 	}
 	case ("START"): {
-		let session = await delphinium.checkSession();
-		if (session){
-			if (!storage.team){
-				let teams = await delphinium.listTeams();
-				if (!teams || teams.length == 0){
-					response.code = RESPONSE_CODES.ERROR;
-					response.message = "Requsted teams, but can't parse response";
-					return response;
-				} else if (teams.length == 1) {
-					storage.team = teams[0].id;
-					response.code = RESPONSE_CODES.OK;
-					return response;
-				} else {
-					response.code = RESPONSE_CODES.SELECT_TEAM;
-					response.teams = teams;
-					return response;
-				}
+		if (!storage.team){
+			let teams = await delphinium.listTeams();
+			if (!teams || teams.length == 0){
+				response.code = RESPONSE_CODES.ERROR;
+				response.message = "Requsted teams, but can't parse response";
+				return response;
+			} else if (teams.length == 1) {
+				storage.team = teams[0].id;
+				response.code = RESPONSE_CODES.OK;
+				return response;
+			} else {
+				response.code = RESPONSE_CODES.SELECT_TEAM;
+				response.teams = teams;
+				return response;
 			}
-			response.code = RESPONSE_CODES.OK;
-			return response;
-		} else {
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
 		}
+
+		response.code = RESPONSE_CODES.OK;
+		return response;
 	}
 	case ("LOGIN"): {
 		let loginResponse = await delphinium.login(command.options.login, command.options.password);
@@ -281,14 +297,6 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("APPS"): {
-		sendStatusUpdate("Checking session");
-		let session = await delphinium.checkSession();
-		if (!session){
-			sendStatusUpdate("Authorization required");
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		}
-
 		sendStatusUpdate("Downloading list of apps");
 		let apps = await delphinium.listApps();
 		if (apps){
@@ -301,7 +309,7 @@ async function respondToCommand(command){
 		}
 	}
 	case ("SEL_APP"): {
-		if (!storage.rsMatrix || !storage.cMatrix || !storage.countryCodes){
+		if (!storage.rsMatrix || !storage.cMatrix || !storage.countryCodes || !storage.cpId){
 			sendStatusUpdate("Downloading matrices");
 			matrices = await delphinium.downloadMatrices(command.options.appId);
 			if (matrices[0]){
@@ -312,6 +320,9 @@ async function respondToCommand(command){
 			}
 			if (matrices[2]){
 				storage.countryCodes = matrices[2];
+			}
+			if (matrices[3]){
+				storage.cpId = matrices[3];
 			}
 			saveStorage();
 			if (matrices[0] && matrices[1] && matrices[2])
@@ -329,12 +340,6 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("DL_IAPS"): {
-		let session = await delphinium.checkSession();
-		if (!session){
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		}
-
 		sendStatusUpdate("Downloading IAPs");
 		let result = await delphinium.downloadIAPs(command.options.appId, storage);
 		if (result){
@@ -346,12 +351,6 @@ async function respondToCommand(command){
 		}
 	}
 	case ("BRIEF_IAPS"): {
-		let session = await delphinium.checkSession();
-		if (!session){
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		}
-
 		let result = await delphinium.briefIAPs(command.options.appId)
 		if (result){
 			sendStatusUpdate("Downloaded");
@@ -366,49 +365,26 @@ async function respondToCommand(command){
 		}
 	}
 	case ("CREATE_IAP"): {
-		let session = await delphinium.checkSession();
-		if (!session){
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		}
-
-		let progressUpdate = (progressList)=>{
-			mainWindow.webContents.send("progressUpdate", progressList);
-		}
-		await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
+		await delphinium.createIAPs(command.options.orders, command.options.appId, storage, defaultProgressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
 
 		response.code = RESPONSE_CODES.OK;
 		return response;
 	}
 	case ("EDIT_IAP"): {
-		let session = await delphinium.checkSession();
-		if (!session){
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		}
-
-		let progressUpdate = (progressList)=>{
-			mainWindow.webContents.send("progressUpdate", progressList);
-		}
-
-		await delphinium.editIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.sequentialMode);
-		//await delphinium.createIAPs(command.options.orders, command.options.appId, storage, progressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
+		await delphinium.editIAPs(command.options.orders, command.options.appId, storage, defaultProgressUpdate, command.options.sequentialMode);
+		//await delphinium.createIAPs(command.options.orders, command.options.appId, storage, defaultProgressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
 
 		response.code = RESPONSE_CODES.OK;
 		return response;
 	}
 	case ("SWITCH_IAPS"): {
-		let session = await delphinium.checkSession();
-		if (!session){
-			response.code = RESPONSE_CODES.AUTH;
-			return response;
-		}
+		await delphinium.switchIAPsVersion(command.options.orders, command.options.appId, defaultProgressUpdate, command.options.rejectedOnly);
 
-		let progressUpdate = (progressList)=>{
-			mainWindow.webContents.send("progressUpdate", progressList);
-		}
-		
-		await delphinium.switchIAPsVersion(command.options.orders, command.options.appId, progressUpdate, command.options.rejectedOnly);
+		response.code = RESPONSE_CODES.OK;
+		return response;
+	}
+	case ("UPLOAD"): {
+		await delphinium.uploadScreenshots(command.options.appId, command.options.files, defaultProgressUpdate);
 
 		response.code = RESPONSE_CODES.OK;
 		return response;

@@ -76,6 +76,8 @@
 				<div class="xradio_host" id="mode" onclick="switchMode(event)">
 					<div class="xradio" id="xr_create">Create</div><div class="xradio" id="xr_edit">Edit</div><div class="xradio" id="xr_switch">Switch</div>
 				</div>
+				<input type="file" id="screenshotPicker" onchange="updateScreenshotData()"></input>
+				<label class="xbutton" for="screenshotPicker" multiple>Select files</label>
 			</div>
 			<div class="dialog" id="dialog_main_create">
 				<input type="file" id="filePicker" onchange="addFromFile(this.files[0]);"></input>

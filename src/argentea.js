@@ -70,6 +70,8 @@ const OPERATION_TRIAL     = ".trial";
 const OPERATION_REGFAMILY = ".register";
 const OPERATION_DETAILS   = ".details";
 const OPERATION_UPDATEIAP = ".update";
+const OPERATION_SSOTOKEN  = ".ssotoken";
+const OPERATION_UPLOAD    = ".upload";
 
 const PROGRESS_INITIAL      = "initial";
 const PROGRESS_INPROGRESS   = "inprogress";
@@ -182,6 +184,19 @@ module.exports = {
 				});
 			}
 
+			if (order.screenshot) {
+				t.steps.push({
+					name: "Obtain SSO ITC token",
+					id: order.bundle + OPERATION_SSOTOKEN,
+					status: PROGRESS_INITIAL
+				});
+				t.steps.push({
+					name: "Upload file",
+					id: order.bundle + OPERATION_UPLOAD,
+					status: PROGRESS_INITIAL
+				});
+			}
+
 			mainProgressList.push(t);
 		},
 		planIAPCreation: (order)=>{
@@ -228,6 +243,19 @@ module.exports = {
 				}
 			}
 
+			if (order.screenshot) {
+				t.steps.push({
+					name: "Obtain SSO ITC token",
+					id: order.bundle + OPERATION_SSOTOKEN,
+					status: PROGRESS_INITIAL
+				});
+				t.steps.push({
+					name: "Upload file",
+					id: order.bundle + OPERATION_UPLOAD,
+					status: PROGRESS_INITIAL
+				});
+			}
+
 			mainProgressList.push(t);
 		},
 		planEditing: (order)=>{
@@ -269,6 +297,19 @@ module.exports = {
 				}
 			}
 
+			if (order.screenshot) {
+				t.steps.push({
+					name: "Obtain SSO ITC token",
+					id: order.bundle + OPERATION_SSOTOKEN,
+					status: PROGRESS_INITIAL
+				});
+				t.steps.push({
+					name: "Upload file",
+					id: order.bundle + OPERATION_UPLOAD,
+					status: PROGRESS_INITIAL
+				});
+			}
+
 			t.steps.push({
 				name: "Save changes",
 				id: order.bundle + OPERATION_UPDATEIAP,
@@ -301,6 +342,27 @@ module.exports = {
 				status: PROGRESS_INITIAL
 			};
 
+			mainProgressList.push(t);
+		},
+		planReviewScreenshotUpload: (filename)=>{
+			let t = {
+				name: filename,
+				id: filename,
+				steps: [
+					{
+						name: "Obtain SSO ITC token",
+						id: filename + OPERATION_SSOTOKEN,
+						status: PROGRESS_INITIAL
+					},
+					{
+						name: "Upload file",
+						id: filename + OPERATION_UPLOAD,
+						status: PROGRESS_INITIAL
+					}
+					
+				],
+				status: PROGRESS_INITIAL
+			};
 			mainProgressList.push(t);
 		},
 		beginIAP: (bundleName)=>{
@@ -479,16 +541,47 @@ module.exports = {
 				progress(bundleName, OPERATION_UPDATEIAP, PROGRESS_DONE_FAIL, response.errors);
 				return false;
 			}
+		},
+		uploadReviewScreenshot: async (bundleName, appId, productId, file)=>{
+			progress(bundleName, OPERATION_SSOTOKEN, PROGRESS_INPROGRESS);
+			let ssoResponse = await chlorophytum.sendRefRequest();
+			let ssoToken;
+			if (ssoResponse.result && ssoResponse.result.data){
+				progress(bundleName, OPERATION_SSOTOKEN, PROGRESS_DONE_OK);
+				ssoToken = ssoResponse.result.data.ssoTokenForImage;
+			} else {
+				progress(bundleName, OPERATION_SSOTOKEN, PROGRESS_DONE_FAIL, response.errors);
+				return null
+			}
+
+			progress(bundleName, OPERATION_UPLOAD, PROGRESS_INPROGRESS);
+			response = await chlorophytum.uploadReviewScreenshot(appId, productId, file.bytes, file.name, ssoToken);
+			if (response.result) {
+				progress(bundleName, OPERATION_UPLOAD, PROGRESS_DONE_OK);
+				return response.result;
+			} else {
+				progress(bundleName, OPERATION_UPLOAD, PROGRESS_DONE_FAIL, response.errors);
+				return null;
+			}
 		}
 	},
-	requestServiceKey: async()=>{
+	requestServiceKey: async ()=>{
 		return (await chlorophytum.sendServiceKeyRequest()).result;
 	},
-	checkSession: async()=>{
+	checkSession: async ()=>{
 		let response = await chlorophytum.sendToOlympus();
 		return response.result != "AUTH";
 	},
+	acquireContentProviderId: async ()=>{
+		let response = await chlorophytum.sendUserDetails();
+		if (response.result && response.result.data){
+			return response.result.data.contentProviderId;
+		} else {
+			return null
+		}
+	},
 	listTeams: async ()=>{
+		//response.result.data.contentProviderId
 		let response = await chlorophytum.sendUserDetails();
 		if (response.result && response.result.data){
 			let teamOptions = [];
@@ -561,7 +654,6 @@ module.exports = {
 			return null;
 		}
 	},
-	
 	downloadRSMatrix: async (appId)=>{
 		let matrix = [];
 		let rawRSMatrix = (await chlorophytum.sendRSMatrixRequest(appId)).result;
