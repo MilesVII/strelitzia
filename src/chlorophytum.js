@@ -188,7 +188,7 @@ module.exports = {
 		return genericRequest(METHOD_POST, JSON.stringify(trial), ENDPOINTS.trialCreate, null);
 	},
 
-	uploadReviewScreenshot: (appId, productId, bytes, filename, ssoToken)=>{
+	uploadReviewScreenshot: (appId, productId, screenshot, ssoToken)=>{
 		if (!storage.cpId){
 			return {result: null, errors: "SSO token or content provider ID not loaded. Please restart the app."};
 		}
@@ -197,15 +197,14 @@ module.exports = {
 			"X-Apple-Upload-AppleId": appId,
 			"X-Apple-Upload-ContentProviderId": storage.cpId,
 			"X-Apple-Upload-itctoken": ssoToken,
-			"X-Original-Filename": filename,
-			"X-Apple-Upload-Validation-RuleSets": "MZPFT.SortedN41ScreenShot",
-			"Content-Length": bytes.length,
-			"Connection": "keep-alive",
+			"X-Original-Filename": screenshot.name,
+			"X-Apple-Upload-Validation-RuleSets": screenshot.type, //"MZPFT.SortedN41ScreenShot",
+			"Content-Length": screenshot.bytes.length,
 			"Accept": "application/json, text/plain, */*",
 			"Content-Type": "image/png",
 			"X-Apple-Upload-Referrer": "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/ng/app/" + appId + "/addons/" + productId
 		};
-		return genericRequest(METHOD_POST, bytes, ENDPOINTS.du, null, true, 1, 120000, additionalHeaders);
+		return genericRequest(METHOD_POST, screenshot.bytes, ENDPOINTS.du, null, true, 1, 120000, additionalHeaders);
 	}
 };
 
@@ -277,7 +276,9 @@ function formHeader(dataLength){
 		"Content-Type": 'application/json',
 		"Content-Length": dataLength,
 		"X-Requested-With": 'XMLHttpRequest',
-		"Accept": "application/json, text/javascript"
+		"Accept": "application/json, text/javascript",
+		"Connection": "keep-alive",
+		"X-Csrf-Itc": "itc"
 	};
 	if (storage["sessionId"]) headers["X-Apple-Id-Session-Id"] = storage["sessionId"];
 	if (storage["serviceKey"])   headers["X-Apple-Widget-Key"] = storage["serviceKey"];
@@ -451,7 +452,7 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 		});
 
 		req.on('error', error => {
-			console.error("Error happened on " + error);
+			console.error("Error happened: " + error);
 			requestErrors[retryIndex] = [BAD_APOL, error];
 			resolve(null);
 		});

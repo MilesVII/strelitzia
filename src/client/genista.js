@@ -282,7 +282,7 @@ let tables = {
 	"spreadsheet_edit": null
 }
 tableFiles = [];
-function initTable(id, rsMatrix, cMatrix){
+function initTable(id, screenshotColumn, rsMatrix, cMatrix){
 	if (tables[id]) {
 		tables[id].destroy(); 
 	}
@@ -299,7 +299,7 @@ function initTable(id, rsMatrix, cMatrix){
 	let settings = {
 		data: [],
 		rowHeaders: true,
-		colHeaders: ["Type", "Reference Name", "Bundle Suffix", "Price (RS)", "Price (C/NC)", "Duration", "Trial", "Name (en-US)", "Description (en-US)", "Screenshot"],
+		colHeaders: ["Type", "Reference Name", "Bundle Suffix", "Price (RS)", "Price (C/NC)", "Duration", "Trial", "Name (en-US)", "Description (en-US)"],
 		columns: [
 			{
 				type: "dropdown",
@@ -324,21 +324,24 @@ function initTable(id, rsMatrix, cMatrix){
 				source: IAP_TRIALS
 			},
 			{},
-			{},
-			{
-				type: "dropdown",
-				source: (query, callback)=>{
-					let names = [];
-					for (let file of tableFiles){
-						names.push(file.name);
-					}
-					callback(names);
-				}
-			}
+			{}
 		],
 		minSpareRows: 1,
 		licenseKey: "non-commercial-and-evaluation"
 	};
+	if (screenshotColumn){
+		settings.colHeaders.push("Screenshot");
+		settings.columns.push({
+			type: "dropdown",
+			source: (query, callback)=>{
+				let names = [];
+				for (let file of tableFiles){
+					names.push(file.name);
+				}
+				callback(names);
+			}
+		});
+	} 
 	let container = document.getElementById(id);
 	tables[id] = new Handsontable(container, settings);
 }
@@ -384,6 +387,7 @@ function startLogin(){
 	status("");
 	hideAllDialogs();
 	document.getElementById("dialog_login").style.display = "block";
+	document.getElementById("dialog_login_login").focus();
 }
 function relogin(){
 	startLogin();
@@ -393,6 +397,7 @@ function startCodeRequest(){
 	status("");
 	hideAllDialogs();
 	document.getElementById("dialog_code").style.display = "block";
+	document.getElementById("dialog_code_code").focus();
 }
 
 function startTeamSelect(teams){
@@ -457,7 +462,7 @@ function isValid(order, appBundle){
 			return false;
 		}
 
-		if (!["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(order.trial)){
+		if (order.trial && !["off", "3d", "1w", "1m", "2m", "3m", "6m", "1y"].includes(order.trial)){
 			showModal("Unknown trial type for " + order.bundle);
 			return false;
 		}
@@ -581,8 +586,8 @@ function startMainDialog(cMatrix, rsMatrix, appBundle, appId){
 	document.getElementById("dialog_main_appname").textContent = appBundle;
 	status("");
 	hideAllDialogs();
-	initTable("spreadsheet_create", rsMatrix, cMatrix);
-	initTable("spreadsheet_edit", rsMatrix, cMatrix);
+	initTable("spreadsheet_create", false, rsMatrix, cMatrix);
+	initTable("spreadsheet_edit", true, rsMatrix, cMatrix);
 	let dialog = document.getElementById("dialog_main");
 	dialog.style.display = "block";
 }
@@ -832,14 +837,13 @@ function createIAPs(overwriteAllowed, sequentialMode){
 	message.options.sequentialMode = sequentialMode;
 
 	let button = document.getElementById("dialog_create_confirmer");
-	defaultButtonColor = button.style.backgroundColor;
 
 	sendCommand(message, (r)=>{
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
 				status("Finished");
 				button.disabled = false;
-				button.style.backgroundColor = defaultButtonColor;
+				button.style.backgroundColor = "#333";
 				button.value = 0;
 				buttonsLocked = false;
 				break;
@@ -948,6 +952,32 @@ function downloadIAPs(){
 	return false;
 }
 
+function getDimensions(src){
+	return new Promise((resolve)=>{
+		let img = new Image();
+	
+		img.onload = function(){
+			resolve({
+				w: img.width,
+				h: img.height
+			});
+		}
+	
+		img.src = src;
+    });
+}
+
+function getScreenshotType(dimensions){
+	for (let entry of SCREENSHOT_TYPES){
+		for (let dim of entry.dimensions){
+			if (dim[0] == dimensions.w && dim[1] == dimensions.h){
+				return entry.type;
+			}
+		}
+	}
+	return null;
+}
+
 async function updateScreenshotData(){
 	let files = document.getElementById("screenshotPicker").files;
 
@@ -958,13 +988,16 @@ async function updateScreenshotData(){
 	}
 	arrays = await Promise.all(promises);
 	for (let i in arrays){
+		let dimensions = await getDimensions(files[i].path);
 		arrays[i] = {
 			name: files[i].name, 
-			bytes: new Uint8Array(arrays[i])
+			bytes: new Uint8Array(arrays[i]),
+			dimensions: dimensions,
+			type: getScreenshotType(dimensions)
 		};
 	}
 
-	tableFiles = arrays;
+	tableFiles = arrays.filter(file => file.type);
 }
 
 const SWITCH_ITEM_ID_PREFIX = "dialog_switch_list_";
@@ -1020,7 +1053,10 @@ function downloadIAPsBriefing(){
 }
 
 ipcRenderer.on("statusUpdate", (event, arg) => {
-	status(arg);
+	if (arg.modal)
+		showModal(arg.e);
+	else 
+		status(arg);
 });
 ipcRenderer.on("progressUpdate", (event, arg) => {
 	const ICON_INITIAL = "⬜";

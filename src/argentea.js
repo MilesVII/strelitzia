@@ -278,22 +278,24 @@ module.exports = {
 			};
 		
 			if (order.type == "rs"){
-				t.steps.push({
-					name: "Equalize price",
-					id: order.bundle + OPERATION_EQUALIZE,
-					status: PROGRESS_INITIAL
-				});
-				t.steps.push({
-					name: "Set price",
-					id: order.bundle + OPERATION_PRICE,
-					status: PROGRESS_INITIAL
-				});
-				if (order.trial != "off"){
+				if (order.price){
 					t.steps.push({
-						name: "Do nuffing while trying to add trial",
-						id: order.bundle + OPERATION_TRIAL,
+						name: "Equalize price",
+						id: order.bundle + OPERATION_EQUALIZE,
 						status: PROGRESS_INITIAL
 					});
+					t.steps.push({
+						name: "Set price",
+						id: order.bundle + OPERATION_PRICE,
+						status: PROGRESS_INITIAL
+					});
+					if (order.trial){
+						t.steps.push({
+							name: "Do nuffing while trying to add trial",
+							id: order.bundle + OPERATION_TRIAL,
+							status: PROGRESS_INITIAL
+						});
+					}
 				}
 			}
 
@@ -555,7 +557,7 @@ module.exports = {
 			}
 
 			progress(bundleName, OPERATION_UPLOAD, PROGRESS_INPROGRESS);
-			response = await chlorophytum.uploadReviewScreenshot(appId, productId, file.bytes, file.name, ssoToken);
+			response = await chlorophytum.uploadReviewScreenshot(appId, productId, file, ssoToken);
 			if (response.result) {
 				progress(bundleName, OPERATION_UPLOAD, PROGRESS_DONE_OK);
 				return response.result;

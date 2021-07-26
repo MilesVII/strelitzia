@@ -205,7 +205,7 @@ module.exports = {
 			argentea.planning.planIAPCreation(order);
 		}
 
-		function startPromise(order, appId, selectedFamilyId, storage){
+		function startPromise(order, appId, selectedFamily, storage){
 			return new Promise(async (resolve)=>{
 				argentea.planning.beginIAP(order.bundle);
 				let template = await argentea.operations.requestIAPTemplate(order.bundle, appId);
@@ -215,7 +215,6 @@ module.exports = {
 					return false;
 				}
 
-				template.familyId = selectedFamilyId;
 				template.productId = {value: order.bundle};
 				template.referenceName = {value: order.refname};
 				template.clearedForSale = {value: true};
@@ -229,6 +228,7 @@ module.exports = {
 				
 				if (order.type == "rs"){
 					template.pricingDurationType = {value: order.duration};
+					template.familyId = selectedFamily.id;
 				}
 
 				if (! await argentea.operations.createIAP(order.bundle, template, appId, overwriteAllowed)){
@@ -261,13 +261,13 @@ module.exports = {
 		if (sequentialMode){
 			for (order of orders){
 				if (firstRSOrderCreated && order == firstRSOrder) continue;
-				await startPromise(order, appId, selectedFamily.id, storage);
+				await startPromise(order, appId, selectedFamily, storage);
 			}
 		} else {
 			let promises = [];
 			for (order of orders){
 				if (firstRSOrderCreated && order == firstRSOrder) continue;
-				promises.push(startPromise(order, appId, selectedFamily.id, storage));
+				promises.push(startPromise(order, appId, selectedFamily, storage));
 			}
 			await Promise.all(promises);
 		}
@@ -317,11 +317,11 @@ module.exports = {
 				productDetails.versions[0].reviewScreenshot.value = {
 					assetToken: asset.token,
             		sortOrder: 0,
-					type: asset.type,
+					type: order.screenshot.type, //"MZPFT.SortedN41ScreenShot",
 					originalFileName: order.screenshot.name,
 					size: order.screenshot.bytes.length,
-					height: asset.height,
-					width: asset.width,
+					width: asset.width, //order.screenshot.dimensions.w
+					height: asset.height, //order.screenshot.dimensions.h
 					checksum: asset.md5
 				};
 			}
@@ -431,9 +431,13 @@ async function sendPriceAndTrial(order, appId, productId, rsMatrix, cMatrix, cou
 	if (! await argentea.operations.createRSPricing(order.bundle, equalizedTierMap, countryCodes, appId, productId))
 		return false;
 	
-	if (order.trial != "off"){
-		if (! await argentea.operations.createTrial(order.bundle, order.trial, appId, productId, countryCodes))
-			return false;
+	if (order.trial){
+		if (order.trial == "off"){
+			//TODO: Try deleting trial
+		} else {
+			if (! await argentea.operations.createTrial(order.bundle, order.trial, appId, productId, countryCodes))
+				return false;
+		}
 	}
 	return true;
 }

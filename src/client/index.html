@@ -13,6 +13,7 @@
 		<link rel="stylesheet" href="./handsontable/handsontable.full.min.css" type="text/css" />
 		
 		<link rel="stylesheet" type="text/css" href="styles.css">
+		<script type="text/javascript" src="./screenshotTypes.js"></script>
 		<script type="text/javascript" src="./genista.js"></script>
 		</script>
 	</head>
@@ -76,8 +77,8 @@
 				<div class="xradio_host" id="mode" onclick="switchMode(event)">
 					<div class="xradio" id="xr_create">Create</div><div class="xradio" id="xr_edit">Edit</div><div class="xradio" id="xr_switch">Switch</div>
 				</div>
-				<input type="file" id="screenshotPicker" onchange="updateScreenshotData()"></input>
-				<label class="xbutton" for="screenshotPicker" multiple>Select files</label>
+				<input type="file" id="screenshotPicker" onchange="updateScreenshotData()" accept="image/png" multiple></input>
+				<label class="xbutton" for="screenshotPicker">Select files</label>
 			</div>
 			<div class="dialog" id="dialog_main_create">
 				<input type="file" id="filePicker" onchange="addFromFile(this.files[0]);"></input>
@@ -87,8 +88,8 @@
 					<label for="dialog_create_overwrite">Allow overwriting existing IAPs</label>
 				</div>
 				<div>
-					<input type="checkbox" id="dialog_create_sequential" checked>
-					<label for="dialog_create_sequential">Create IAPs sequentially (safer)</label>
+					<input type="checkbox" id="dialog_create_sequential">
+					<label for="dialog_create_sequential">Create IAPs sequentially</label>
 				</div>
 				<div id="spreadsheet_create" style="font-size: 10pt;"></div>
 				<div class="slidecontainer">

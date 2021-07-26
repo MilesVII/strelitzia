@@ -67,9 +67,10 @@ const zlib = require("zlib");   //For reading apol POST responses (really)
 const {app, BrowserWindow, ipcMain} = require('electron');
 const { assert } = require('console');
 
+const REQ_DEBUG = false;
 const chlorophytum = require("./chlorophytum.js");
 const delphinium = require('./delphinium.js');
-chlorophytum.setSUC(sendStatusUpdate);
+chlorophytum.setSUC(REQ_DEBUG?sendStatusUpdate:()=>{});
 let mainWindow;
 
 function createWindow () {
@@ -134,8 +135,16 @@ function start(){
 }
 
 ipcMain.on('strelitziaCommand', async (event, command) => {
-	let r = await respondToCommand(command);
-	event.sender.send("strelitziaResponse", r);
+	try {
+		let r = await respondToCommand(command);
+		
+		event.sender.send("strelitziaResponse", r);
+	} catch(e){
+		sendStatusUpdate({
+			modal: true,
+			e: e
+		});
+	}
 })
 
 const RESPONSE_CODES = {
@@ -366,13 +375,12 @@ async function respondToCommand(command){
 	}
 	case ("CREATE_IAP"): {
 		await delphinium.createIAPs(command.options.orders, command.options.appId, storage, defaultProgressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
-
+		
 		response.code = RESPONSE_CODES.OK;
 		return response;
 	}
 	case ("EDIT_IAP"): {
 		await delphinium.editIAPs(command.options.orders, command.options.appId, storage, defaultProgressUpdate, command.options.sequentialMode);
-		//await delphinium.createIAPs(command.options.orders, command.options.appId, storage, defaultProgressUpdate, command.options.overwriteAllowed, command.options.sequentialMode);
 
 		response.code = RESPONSE_CODES.OK;
 		return response;
