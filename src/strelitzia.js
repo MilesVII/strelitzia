@@ -362,7 +362,7 @@ async function respondToCommand(command){
 	case ("BRIEF_IAPS"): {
 		let result = await delphinium.briefIAPs(command.options.appId)
 		if (result){
-			sendStatusUpdate("Downloaded");
+			sendStatusUpdate("Downloaded " + ((result.length == 1) ? result.length + " IAP" : result.length + " IAPs"));
 			response.iaps = result;
 			response.code = RESPONSE_CODES.OK;
 			return response;

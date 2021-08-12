@@ -398,11 +398,16 @@ module.exports = {
 
 function modifyVersionByFlippingLocale(versions, localeA, localeB){
 	for (let i in versions){
+		let name = versions[i].value?.name?.value;
+		let description = versions[i].value?.description?.value;
+
 		if (versions[i].value.localeCode == localeA){
-			versions[i].value.localeCode = localeB;
+			versions[i] = buildVersion(name, description, localeB);
+			//versions[i].value.localeCode = localeB;
 			return true;
 		} else if (versions[i].value.localeCode == localeB){
-			versions[i].value.localeCode = localeA;
+			versions[i] = buildVersion(name, description, localeA);
+			//versions[i].value.localeCode = localeA;
 			return true;
 		}
 	}

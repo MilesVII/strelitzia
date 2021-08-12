@@ -37,7 +37,7 @@ table, tr, th {
 	border-color: #DA4000;*/
 	background-color: #222;
 	background-color: rgba(32, 32, 32, .6);
-	backdrop-filter: blur(5px);
+	/*backdrop-filter: blur(5px);*/
 	color: #FFF;
 }
 
@@ -89,7 +89,7 @@ table, tr, th {
 	padding: 20px;
 	background-color: rgba(255, 177, 131, .4);
 	background-color: rgba(240, 240, 240, .72);
-	backdrop-filter: blur(5px);
+	/*backdrop-filter: blur(5px);*/
 	border-radius: 3px;
 }
 
