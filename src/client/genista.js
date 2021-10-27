@@ -206,11 +206,14 @@ function refreshCreateConfirmer(s){
 		s.value = 100;
 		s.style.backgroundColor = "#DA4000";
 		s.disabled = true;
-		let overwriteCheck = document.getElementById("dialog_create_overwrite");
-		let sequentialCheck = document.getElementById("dialog_create_sequential");
-		createIAPs(overwriteCheck.checked, sequentialCheck.checked);
-	}		
-} 
+		forceCreate();
+	}
+}
+function forceCreate(){
+	let overwriteCheck = document.getElementById("dialog_create_overwrite");
+	let sequentialCheck = document.getElementById("dialog_create_sequential");
+	createIAPs(overwriteCheck.checked, sequentialCheck.checked);
+}
 
 function resetCreateConfirmer(s){
 	if (s.value < 98)
@@ -222,9 +225,12 @@ function refreshEditConfirmer(s){
 		s.value = 100;
 		s.style.backgroundColor = "#DA4000";
 		s.disabled = true;
-		editIAPs();
-	}		
+		forceEdit();
+	}
 } 
+function forceEdit(){
+	editIAPs();
+}
 
 function resetEditConfirmer(s){
 	if (s.value < 98)
@@ -236,13 +242,22 @@ function refreshSwitchConfirmer(s){
 		s.value = 100;
 		s.style.backgroundColor = "#DA4000";
 		s.disabled = true;
-		switchIAPs();
+		forceSwitch();
 	}
+}
+function forceSwitch(){
+	switchIAPs();
 }
 
 function resetSwitchConfirmer(s){
 	if (s.value < 98)
 		s.value = 0;
+}
+
+function unlockConfirmer(s){
+	s.value = 0;
+	s.style.backgroundColor = "#333";
+	s.disabled = false;
 }
 
 function switchMode(e){
@@ -377,6 +392,12 @@ function start(){
 	document.addEventListener("keydown", (e) => {
 		if (e.key == "F12")
 			remote.getCurrentWindow().openDevTools();
+		if (e.key.startsWith("Alt"))
+			document.querySelectorAll(".hiddenByShift").forEach((e)=>{e.style.display = "block"});
+	});
+	document.addEventListener("keyup", (e) => {
+		if (e.key.startsWith("Alt"))
+			document.querySelectorAll(".hiddenByShift").forEach((e)=>{e.style.display = "none"});
 	});
 	
 	document.body.style.backgroundImage = backs[Math.floor(Math.random() * backs.length)];
@@ -919,9 +940,7 @@ function switchIAPs(){
 		switch(r.code){
 			case(RESPONSE_CODES.OK):
 				status("Finished");
-				button.disabled = false;
-				button.style.backgroundColor = "#333";
-				button.value = 0;
+				unlockConfirmer(button);
 				switchButtonsLocked = false;
 				break;
 			case(RESPONSE_CODES.AUTH):
@@ -1138,10 +1157,23 @@ ipcRenderer.on("progressUpdate", (event, arg) => {
 	dialog.appendChild(list);
 });
 
+function forceLaumnch(starter){
+	antiracer += 1;
+	buttonsLocked = false;
+	editButtonsLocked = false;
+	switchButtonsLocked = false;
+	starter();
+	document.querySelectorAll(".slider").forEach((e)=>{e.style.backgroundColor="pink";});
+}
+
+let antiracer = 0;
 function sendCommand(command, callback){
+	let localAntiracer = antiracer;
 	ipcRenderer.once("strelitziaResponse", (event, response) => {
-		if (!processCommonResponses(response)){
-			callback(response);
+		if (localAntiracer == antiracer){
+			if (!processCommonResponses(response)){
+				callback(response);
+			}
 		}
 	});
 	ipcRenderer.send("strelitziaCommand", command);

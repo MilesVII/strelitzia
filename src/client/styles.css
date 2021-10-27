@@ -61,7 +61,7 @@ table, tr, th {
 }
 
 #content {
-	margin: 32px 15% 0 15%;
+	margin: 32px 15% 320px 15%;
 	padding: 0 0 0 0;
 	color: #000;
 }
@@ -91,6 +91,15 @@ table, tr, th {
 	background-color: rgba(240, 240, 240, .72);
 	/*backdrop-filter: blur(5px);*/
 	border-radius: 3px;
+}
+
+.littleText {
+	font-size: 12pt;
+	font-style: italic;
+}
+
+.hiddenByShift {
+	display: none;
 }
 
 #status {

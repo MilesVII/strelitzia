@@ -95,6 +95,10 @@
 				<div class="slidecontainer">
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_create_confirmer" oninput="refreshCreateConfirmer(this)" onmouseup="resetCreateConfirmer(this)">
 				</div>
+				<div class="littleText">Press [alt] to enable force option. Doing so doesn't cancel current operation.</div>
+				<div class="hiddenByShift">
+					<div class="xbutton" id="dialog_button_download" onclick="forceLaumnch(forceCreate);">Force Laumnch</div>	
+				</div>
 			</div>
 			<div class="dialog" id="dialog_main_edit">
 				<div class="xbutton" id="dialog_button_download" onclick="downloadIAPs();">Download existing IAPs</div>
@@ -102,6 +106,11 @@
 				<div class="slidecontainer">
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_edit_confirmer" oninput="refreshEditConfirmer(this)" onmouseup="resetEditConfirmer(this)">
 				</div>
+				<div class="littleText">Press [alt] to enable force option. Doing so doesn't cancel current operation.</div>
+				<div class="hiddenByShift">
+					<div class="xbutton" id="dialog_button_download" onclick="forceLaumnch(forceEdit);">Force Laumnch</div>
+				</div>
+				
 			</div>
 			<div class="dialog" id="dialog_main_switch">
 				<div class="xbutton" id="dialog_button_download" onclick="downloadIAPsBriefing();">Download existing IAPs</div>
@@ -112,6 +121,10 @@
 				<div id="dialog_switch_list" class="marginedBlock"></div>
 				<div class="slidecontainer">
 					<input type="range" min="1" max="100" value="0" class="slider" id="dialog_switch_confirmer" oninput="refreshSwitchConfirmer(this)" onmouseup="resetSwitchConfirmer(this)">
+				</div>
+				<div class="littleText">Press [alt] to enable force option. Doing so doesn't cancel current operation.</div>
+				<div class="hiddenByShift">
+					<div class="xbutton" id="dialog_button_download" onclick="forceLaumnch(forceSwitch);">Force Laumnch</div>
 				</div>
 			</div>
 		</div>
