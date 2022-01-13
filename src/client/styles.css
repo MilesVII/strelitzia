@@ -168,7 +168,7 @@ input[type=checkbox]:not(:checked) + label {
 	padding: 5px;
 }
 
-.xbutton, .xradio, input[type="submit"]{
+.xbutton, .xradio, input[type="submit"] {
 	margin: auto;
 	margin-top: 2px;
 	border: 0;
@@ -184,12 +184,26 @@ input[type=checkbox]:not(:checked) + label {
 	border-radius: 3px;
 }
 
-.xbutton:hover, input[type="submit"]:hover{
+.xbutton:hover, input[type="submit"]:hover {
 	background-color: #ddd;
 }
 
-.xbutton:active, .xradio:active, input[type="submit"]:active{
+.xbutton:active, .xradio:active, input[type="submit"]:active {
 	background-color: #999;
+}
+
+#dialog_apps_search {
+	margin: auto;
+	margin-top: 2px;
+	border: 0;
+	padding: 5px;
+	width: 50%;
+	font-family: sans-serif;
+    font-weight: 200;
+	font-size: 17pt;
+	text-decoration: none;
+	display: block;
+	border-radius: 3px;
 }
 
 .xradio {

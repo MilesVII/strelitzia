@@ -357,7 +357,7 @@ function unsafeGenericRequest(method, data, endpoint, endpointParameters, jsonEx
 	return new Promise(resolve => {
 		const options = {
 			method: method,
-			headers: formHeader((method == "GET") ? 0 : data.length),
+			headers: formHeader((method == "GET") ? 0 : (new TextEncoder().encode(data)).length),
 			timeout: timeout
 		}
 		if (additionalHeaders) Object.assign(options.headers, additionalHeaders);

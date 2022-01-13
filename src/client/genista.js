@@ -303,12 +303,12 @@ function initTable(id, screenshotColumn, rsMatrix, cMatrix){
 	}
 
 	let rsPrices = [];
-	for (let rsPrice of rsMatrix){
-		rsPrices.push(rsPrice.price);
+	for (let rsp of rsMatrix){
+		rsPrices.push(rsp.price);
 	}
-	let сPrices = [];
-	for (let сPrice of cMatrix){
-		сPrices.push(сPrice.price);
+	let cPrice = [];
+	for (let cp of cMatrix){
+		cPrice.push(cp.price);
 	}
 
 	let settings = {
@@ -328,7 +328,7 @@ function initTable(id, screenshotColumn, rsMatrix, cMatrix){
 			},
 			{
 				type: "dropdown",
-				source: сPrices
+				source: cPrice
 			},
 			{
 				type: "dropdown",
@@ -439,7 +439,7 @@ function startTeamSelect(teams){
 function startAppSelect(apps){
 	status("Select app:");
 	hideAllDialogs();
-	let appSelector = document.getElementById("dialog_apps");
+	let appSelector = document.getElementById("dialog_apps_list");
 	appSelector.innerHTML = "";
 	for (let a of apps){
 		let option = document.createElement("div");
@@ -448,7 +448,20 @@ function startAppSelect(apps){
 		option.onclick = () => {selectApp(a);};
 		appSelector.appendChild(option);
 	}
-	appSelector.style.display = "inline-block";
+	document.getElementById("dialog_apps").style.display = "inline-block";
+}
+
+function searchUpdate(){
+	let searchInput = document.getElementById("dialog_apps_search");
+	let appSelector = document.getElementById("dialog_apps_list");
+	let query = searchInput.value.toLowerCase();
+	for (let item of appSelector.children){
+		if (item.textContent.toLowerCase().includes(query)){
+			item.style.display = "block";
+		} else {
+			item.style.display = "none";
+		}
+	}
 }
 
 function isValid(order, appBundle){

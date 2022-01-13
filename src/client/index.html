@@ -70,7 +70,10 @@
 				<div class="xbutton" id="backToLogin" onclick="relogin()">Request another code</div>
 			</div>
 			<div class="dialog" id="dialog_team"></div>
-			<div class="dialog" id="dialog_apps"></div>
+			<div class="dialog" id="dialog_apps">
+				<input type="text" id="dialog_apps_search" placeholder="🔎 Search" oninput="searchUpdate()"></input>
+				<div id="dialog_apps_list"></div>
+			</div>
 			<div class="dialog" id="dialog_main">
 				<div id="dialog_main_appname"></div>
 				<div class="xbutton" onclick="listApps()">Back to app list</div>
