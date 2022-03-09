@@ -1,7 +1,7 @@
 /*
 Strelitzia.js
 
-Strelitzia is main module responsible for wrapping platform-depending code and provide Delphinium' functionality to GUI
+Strelitzia is main module responsible for wrapping platform-depending code and providing Delphinium's functionality to GUI
 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢨⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -68,9 +68,8 @@ const {app, BrowserWindow, ipcMain} = require('electron');
 const { assert } = require('console');
 
 const REQ_DEBUG = false;
-const chlorophytum = require("./chlorophytum.js");
+const chlorophytum = require("./chlorophytum.js"); // Just to provide storage access for cookies
 const delphinium = require('./delphinium.js');
-chlorophytum.setSUC(REQ_DEBUG?sendStatusUpdate:()=>{});
 let mainWindow;
 
 function createWindow () {
@@ -127,11 +126,6 @@ function start(){
 	if (!storage.serviceKey){
 		setServiceKey();
 	}
-
-	//let path = process.execPath;
-	//path = path.substring(0, path.lastIndexOf("/") + 1);
-
-	//console.log("Current path " + process.cwd());
 }
 
 ipcMain.on('strelitziaCommand', async (event, command) => {

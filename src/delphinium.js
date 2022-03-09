@@ -62,10 +62,10 @@ const DEFAULT_FAMILY_NAME = "Subscriptions";
 const DEBUG_FAMILY_BYPASS = false;
 
 module.exports = {
-	requestServiceKey: async()=>{
+	requestServiceKey: async ()=>{
 		return await argentea.requestServiceKey();
 	},
-	checkSession: async()=>{
+	checkSession: async ()=>{
 		return await argentea.checkSession();
 	},
 	listTeams: async ()=>{
@@ -316,7 +316,7 @@ module.exports = {
 				let asset = await argentea.operations.uploadReviewScreenshot(order.bundle, appId, productId, order.screenshot);
 				productDetails.versions[0].reviewScreenshot.value = {
 					assetToken: asset.token,
-            		sortOrder: 0,
+					sortOrder: 0,
 					type: order.screenshot.type, //"MZPFT.SortedN41ScreenShot",
 					originalFileName: order.screenshot.name,
 					size: order.screenshot.bytes.length,

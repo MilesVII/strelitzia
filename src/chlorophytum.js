@@ -67,18 +67,12 @@ let storage = null;
 let saveStorage;
 const JSON_EXPECTED = true;
 
-let status;
-
 module.exports = {
 	BAD_APOL: BAD_APOL,
 
 	setStorage: (s, saveCallback)=>{
 		storage = s;
 		saveStorage = saveCallback;
-	},
-
-	setSUC: (cb)=>{
-		status = cb;
 	},
 
 	sendServiceKeyRequest: ()=>{
@@ -198,7 +192,7 @@ module.exports = {
 			"X-Apple-Upload-ContentProviderId": storage.cpId,
 			"X-Apple-Upload-itctoken": ssoToken,
 			"X-Original-Filename": screenshot.name,
-			"X-Apple-Upload-Validation-RuleSets": screenshot.type, //"MZPFT.SortedN41ScreenShot",
+			"X-Apple-Upload-Validation-RuleSets": screenshot.type,
 			"Content-Length": screenshot.bytes.length,
 			"Accept": "application/json, text/plain, */*",
 			"Content-Type": "image/png",
@@ -320,7 +314,6 @@ function sleep(ms) {
 const RETRY_DELAY_MS_MIN = 1200;
 const RETRY_DELAY_MS_SPREAD = 4200;
 async function genericRequest(method, data, endpoint, endpointParameters, jsonExpected = false, tries = 5, timeout = 10000, additionalHeaders = null){
-	status("EP: " + endpoint + "\nEPP: " + endpointParameters + "\nD: " + data);
 	let requestErrors = [];
 	let triesTotal = tries;
 	while (tries > 0){
