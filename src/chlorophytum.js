@@ -80,16 +80,19 @@ module.exports = {
 	},
 
 	sendToOlympus: ()=>{
-		return genericRequest("GET", null, ENDPOINTS.olympus, null);
+		return genericRequest(METHOD_GET, null, ENDPOINTS.olympus, null);
 	},
 
-	sendLogin: (login, password)=>{
+	sendLogin: async (login, password)=>{
 		const data = JSON.stringify({
 			accountName: login,
 			password: password,
 			rememberMe: true
 		});
-		return genericRequest("POST", data, ENDPOINTS.login, null);
+		let result = await genericRequest(METHOD_POST, data, ENDPOINTS.login, null);
+		//Needed to request code via SMS
+		if (result.result == "CODE") await genericRequest(METHOD_GET, null, ENDPOINTS.uselessAuth, null);
+		return result;
 	},
 
 	sendCode: (code)=>{
@@ -205,7 +208,8 @@ module.exports = {
 const ENDPOINTS = {
 	serviceKey:            "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com",
 	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
-	login:                 "https://idmsa.apple.com/appleauth/auth/signin",
+	login:                 "https://idmsa.apple.com/appleauth/auth/signin?isRememberMeEnabled=true",
+	uselessAuth:           "https://idmsa.apple.com/appleauth/auth",
 	code:                  "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
 	preferredCurrencies:   "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
 	userdetails:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
