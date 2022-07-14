@@ -586,15 +586,12 @@ module.exports = {
 		//response.result.data.contentProviderId
 		let response = await chlorophytum.sendUserDetails();
 		if (response.result && response.result.data){
-			let teamOptions = [];
-			for (let a of response.result.data.associatedAccounts){
-				let team = {
-					name: a.contentProvider.name,
-					id: a.contentProvider.contentProviderId
-				};
-				teamOptions.push(team);
-			}
-			return teamOptions;
+			//console.log(response.result.data.contentProviderPublicId);
+			return response.result.data.associatedAccounts.map(a => ({
+				name: a.contentProvider.name,
+				id: a.contentProvider.contentProviderId,
+				providerId: a.contentProvider.contentProviderPublicId
+			}));
 		} else {
 			return null;
 		}
@@ -606,10 +603,18 @@ module.exports = {
 		let response = await chlorophytum.sendCode(code);
 		return response.result == "OK";//TODO: Investigate response for wrong code
 	},
+	sendTeam: async (providerId)=>{
+		return (await chlorophytum.sendTeam(providerId)).result == "OK";
+	},
 	listApps: async ()=>{
 		let response = await chlorophytum.sendAppsRequest();
 
 		if (response.result && response.result.data){
+			return response.result.data.map(app => ({
+				id: app.id,
+				name: app.attributes.name,
+				bundle: app.attributes.bundleId
+			}));
 			let apps = [];
 			for (let app of response.result.data.summaries){
 				apps.push({

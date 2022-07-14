@@ -104,6 +104,23 @@ module.exports = {
 		return genericRequest(METHOD_POST, data, ENDPOINTS.code, null);
 	},
 
+	sendTeam: (providerId)=>{
+		const data = JSON.stringify({
+			data: {
+				type: "providerSwitchRequests",
+				relationships: {
+				provider: {
+					data: {
+						type: "providers",
+						id: providerId
+					}
+				}
+				}
+			}
+		});
+		return genericRequest(METHOD_POST, data, ENDPOINTS.setTeam, null);
+	},
+
 	sendRefRequest: ()=>{
 		return genericRequest(METHOD_GET, null, ENDPOINTS.appVersionRef, null, JSON_EXPECTED);
 	},
@@ -210,10 +227,12 @@ const ENDPOINTS = {
 	olympus:               "https://appstoreconnect.apple.com/olympus/v1/session",
 	login:                 "https://idmsa.apple.com/appleauth/auth/signin?isRememberMeEnabled=true",
 	uselessAuth:           "https://idmsa.apple.com/appleauth/auth",
+	setTeam:               "https://appstoreconnect.apple.com/olympus/v1/providerSwitchRequests",
 	code:                  "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
 	preferredCurrencies:   "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/users/itc/preferredCurrencies",
 	userdetails:           "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/user/detail",
-	listApps:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
+	//listApps:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/manageyourapps/summary/v2",
+	listApps:              "https://appstoreconnect.apple.com/iris/v1/apps?include=appStoreVersions,appStoreVersionMetrics,betaReviewMetrics&limit=100&filter[removed]=false&filter[appStoreVersions.appStoreState]=READY_FOR_SALE,PREORDER_READY_FOR_SALE,PREPARE_FOR_SUBMISSION,WAITING_FOR_REVIEW,PENDING_CONTRACT,IN_REVIEW,PROCESSING_FOR_APP_STORE,PENDING_DEVELOPER_RELEASE,PENDING_APPLE_RELEASE,WAITING_FOR_EXPORT_COMPLIANCE,REJECTED,METADATA_REJECTED,DEVELOPER_REJECTED,DEVELOPER_REMOVED_FROM_SALE,INVALID_BINARY,REMOVED_FROM_SALE,READY_FOR_REVIEW,ACCEPTED&fields[apps]=name,bundleId,primaryLocale,sku,removed,appStoreVersions,appStoreVersionMetrics,betaReviewMetrics&fields[appStoreVersions]=platform,versionString,appStoreState,storeIcon,watchStoreIcon,isWatchOnly&fields[appStoreVersionMetrics]=messageCount&fields[betaReviewMetrics]=messageCount,platform&limit[appStoreVersions]=6",
 	listIAPs:              "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps",                                   //appId
 	listFamilies:          "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/families",                          //appId
 	iapDetails:            "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/apps/#/iaps/#",                                 //appId, productId

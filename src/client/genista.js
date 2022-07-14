@@ -430,7 +430,7 @@ function startTeamSelect(teams){
 		let option = document.createElement("div");
 		option.className = "xbutton";
 		option.textContent = t.name + " : " + t.id;
-		option.onclick = () => {selectTeam(t.id);};
+		option.onclick = () => {selectTeam(t.id, t.providerId);};
 		teamSelector.appendChild(option);
 	}
 	teamSelector.style.display = "inline-block";
@@ -787,11 +787,12 @@ function sendCode(){
 	return false;
 }
 
-function selectTeam(id){
+function selectTeam(id, providerId){
 	status("");
 	let message = COMMANDS.selectTeam;
 	message.options.name = "unset";
 	message.options.id = id;
+	message.options.providerId = providerId;
 
 	sendCommand(message, (r)=>{
 		switch(r.code){

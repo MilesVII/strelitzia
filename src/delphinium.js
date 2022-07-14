@@ -75,10 +75,13 @@ module.exports = {
 		return await argentea.login(login, password);
 	},
 	sendCode: async (code)=>{
-		return await argentea.sendCode(code);
+		return await argentea.sendCode(code);
+	},
+	sendTeam: (providerId)=>{
+		return argentea.sendTeam(providerId);
 	},
 	listApps: async ()=>{
-		return await argentea.listApps();
+		return await argentea.listApps();
 	},
 	/* [RS Matrix, C Matrix, Country Codes, ContentProvider ID, SSO Token] */
 	downloadMatrices: async (appId)=>{
@@ -115,6 +118,13 @@ module.exports = {
 			dontMakeNoPromises.push(argentea.downloadIAP(appId, iap.adamId));
 		}
 		yourBodyCantKeep = await Promise.allSettled(dontMakeNoPromises);
+
+		// function pbcopy(data) {
+		// 	var proc = require('child_process').spawn('pbcopy'); 
+		// 	proc.stdin.write(data); proc.stdin.end();
+		// }
+		// pbcopy(JSON.stringify(yourBodyCantKeep));
+
 		results = [];
 		for (let raw of yourBodyCantKeep){
 			if (raw.value) raw = raw.value;

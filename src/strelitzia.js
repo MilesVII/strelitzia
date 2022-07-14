@@ -242,7 +242,8 @@ async function respondToCommand(command){
 				response.message = "Requsted teams, but can't parse response";
 				return response;
 			} else if (teams.length == 1) {
-				storage.team = teams[0].id;
+				await delphinium.sendTeam(teams[0].providerId);
+				//storage.team = teams[0].id;
 				response.code = RESPONSE_CODES.OK;
 				return response;
 			} else {
@@ -294,8 +295,9 @@ async function respondToCommand(command){
 		return response;
 	}
 	case ("SEL_TEAM"): {
-		storage.team = command.options.id;
-		saveStorage();
+		//storage.team = command.options.id;
+		//saveStorage();
+		await delphinium.sendTeam(command.options.providerId);
 		response.code = RESPONSE_CODES.OK;
 		return response;
 	}
