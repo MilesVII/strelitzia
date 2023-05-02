@@ -1,6 +1,7 @@
+const _____SOURCE = "https://github.com/fastlane/fastlane/blob/e874a47c6e2e0e61590a03d3b71e75e5a505d1ce/spaceship/lib/assets/displayFamilies.json";
+
 const SCREENSHOT_TYPES = [
 	{
-		"_SOURCE": "https://github.com/fastlane/fastlane/blob/e874a47c6e2e0e61590a03d3b71e75e5a505d1ce/spaceship/lib/assets/displayFamilies.json",
 		"name": "ipad",
 		"dimensions": [
 			[1536, 2008],

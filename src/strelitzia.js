@@ -81,7 +81,8 @@ function createWindow () {
 			nodeIntegration: true,
 			contextIsolation: false,
 			enableRemoteModule: true
-		}
+		},
+		autoHideMenuBar: true
 	});
 
 	mainWindow.loadFile('./src/client/index.html');

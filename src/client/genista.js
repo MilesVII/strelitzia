@@ -362,33 +362,6 @@ function initTable(id, screenshotColumn, rsMatrix, cMatrix){
 }
 
 function start(){
-	let subs = [
-		"Because launching Spaceship is called rocket science",
-		"[eq",
-		"Ракеты нет, скачем на батуте"
-	];
-	let names = [
-		"Strelitzia",
-		"סטרליציה",
-		"Wishmaster"
-	];
-	let backs = [
-		"url(\"./backs/backS.jpg\")",
-		"url(\"./backs/backS.jpg\")",
-		"url(\"./backs/backS2.jpg\")",
-		"url(\"./backs/backS2.jpg\")",
-		"url(\"./backs/backD.jpg\")",
-		"url(\"./backs/backA.jpg\")",
-		"url(\"./backs/backG.jpg\")",
-		"url(\"./backs/backC.jpg\")"
-	];
-	document.getElementById("headerText").textContent = names[Math.floor(Math.random() * names.length)] + " " + remote.app.getVersion();
-	document.getElementById("headerSub").textContent = subs[Math.floor(Math.random() * subs.length)];
-	document.addEventListener("keydown", (e) => {
-		if (e.key == "y" && e.repeat)
-			for (let slider of document.getElementsByClassName("slider"))
-				slider.classList.add("easterSlider");
-	});
 	document.addEventListener("keydown", (e) => {
 		if (e.key == "F12")
 			remote.getCurrentWindow().openDevTools();
@@ -399,8 +372,7 @@ function start(){
 		if (e.key.startsWith("Alt"))
 			document.querySelectorAll(".hiddenByShift").forEach((e)=>{e.style.display = "none"});
 	});
-	
-	document.body.style.backgroundImage = backs[Math.floor(Math.random() * backs.length)];
+
 	sendStart();
 }
 

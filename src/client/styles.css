@@ -5,7 +5,7 @@ html {
 
 body {
 	background-color: #FFF;
-	background-image: url("./backs/backS2.jpg");
+	background-image: url("./backs/backS.jpg");
 	background-size: cover;
 	background-position: center center;
 	background-attachment: fixed;
@@ -315,15 +315,3 @@ input[type=checkbox]:not(:checked) + label {
 	border-radius: 3px;
 	cursor: pointer;
 }
-
-.easterSlider::-webkit-slider-thumb {
-	background: url("http://n6.femjoy.com/free/16864111_gur063_ahq233/pics/014.jpg");
-	background-size: cover;
-	background-position: center;
-}
-
-/*.easterSlider::-moz-range-thumb {
-	background: url("http://n6.femjoy.com/free/16864111_gur063_ahq233/pics/014.jpg");
-	background-size: cover;
-	background-position: center;
-}*/
